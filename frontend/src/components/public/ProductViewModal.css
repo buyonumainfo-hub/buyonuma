@@ -41,15 +41,15 @@
   transition: background 0.15s;
 }
 .pvm-nav:hover { background: rgba(13,13,13,0.8); }
-.pvm-nav-left { left: 0.75rem; }
-.pvm-nav-right { right: 0.75rem; }
+.pvm-nav-left { left: 0.75rem; color: aliceblue;}
+.pvm-nav-right { right: 0.75rem; color: aliceblue;}
 
 .pvm-counter {
   position: absolute;
   bottom: 0.75rem;
   right: 0.75rem;
   background: rgba(13,13,13,0.6);
-  color: var(--white);
+  color: aliceblue;
   font-size: 0.72rem;
   font-weight: 600;
   padding: 0.2rem 0.6rem;
