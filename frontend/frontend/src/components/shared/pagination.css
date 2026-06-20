@@ -1,0 +1,5 @@
+.pagination{display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-top:3rem}
+.pagination button{width:38px;height:38px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--border);border-radius:var(--radius);background:var(--white);color:var(--ink);font-size:0.875rem;font-weight:500;transition:all var(--transition)}
+.pagination button:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
+.pagination button.active{background:var(--surface-dark);color:var(--on-surface-dark);border-color:var(--surface-dark)}
+.pagination button:disabled{opacity:0.4;cursor:not-allowed}

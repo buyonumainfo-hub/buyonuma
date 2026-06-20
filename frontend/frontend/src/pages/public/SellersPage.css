@@ -1,0 +1,116 @@
+.filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.search-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 220px;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.55rem 1rem;
+  color: var(--ink-muted);
+  transition: border-color var(--transition);
+}
+.search-form:focus-within { border-color: var(--gold); }
+
+.search-input {
+  border: none;
+  outline: none;
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--ink);
+  background: transparent;
+}
+.search-input::placeholder { color: #b0a89a; }
+
+.filters-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--ink-muted);
+  font-size: 0.85rem;
+}
+
+/* Category pills */
+.category-pills {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 2rem;
+}
+
+.category-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.9rem;
+  border: 1.5px solid var(--border);
+  border-radius: 100px;
+  background: var(--white);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+
+.category-pill:hover { border-color: var(--ink); color: var(--ink); }
+.category-pill.active { background: var(--ink); color: var(--white); border-color: var(--ink); }
+
+.results-count {
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+  margin-bottom: 1.25rem;
+}
+
+/* Infinite scroll */
+.infinite-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 2rem 0;
+  color: var(--ink-muted);
+  font-size: 0.875rem;
+}
+@keyframes spin-icon { to { transform: rotate(360deg); } }
+.spinning { animation: spin-icon 0.8s linear infinite; }
+
+.end-of-results {
+  text-align: center;
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+  padding: 2rem 0 0.5rem;
+  letter-spacing: 0.04em;
+}
+
+/* Skeleton cards */
+.skeleton-card {
+  height: 280px;
+  background: linear-gradient(90deg, var(--cream-dark) 25%, #e8e3d8 50%, var(--cream-dark) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: var(--radius-lg);
+  box-shadow: none;
+}
+.skeleton-card:hover { transform: none; box-shadow: none; }
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

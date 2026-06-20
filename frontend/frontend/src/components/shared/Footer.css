@@ -1,0 +1,13 @@
+.footer{background:var(--surface-dark);color:rgba(255,255,255,0.7);margin-top:5rem}
+.footer-inner{display:flex;justify-content:space-between;gap:3rem;padding-top:3rem;padding-bottom:3rem}
+.footer-logo{display:flex;align-items:center;gap:0.5rem;color:var(--white);font-family:var(--font-serif);font-size:1rem;font-weight:600;margin-bottom:0.75rem}
+.footer-logo svg{color:var(--gold)}
+.footer-brand p{font-size:0.85rem;max-width:280px;line-height:1.7}
+.footer-links{display:flex;gap:2.5rem}
+.footer-links>div{display:flex;flex-direction:column;gap:0.5rem}
+.footer-links h4{font-family:var(--font-sans);font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);margin-bottom:0.25rem}
+.footer-links a{font-size:0.875rem;transition:color var(--transition)}
+.footer-links a:hover{color:var(--white)}
+.footer-bottom{border-top:1px solid rgba(255,255,255,0.1);padding:1rem 0}
+.footer-bottom p{font-size:0.8rem}
+@media(max-width:640px){.footer-inner{flex-direction:column}.footer-links{flex-wrap:wrap;gap:1.5rem}}
