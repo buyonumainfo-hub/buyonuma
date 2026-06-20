@@ -1,0 +1,21 @@
+.hero{background:var(--surface-dark);color:var(--on-surface-dark);min-height:580px;display:flex;align-items:center;position:relative;overflow:hidden;padding:5rem 0}
+.hero-bg-pattern{position:absolute;inset:0;background-image:radial-gradient(circle at 20% 50%,rgba(184,146,58,0.08) 0%,transparent 50%),radial-gradient(circle at 80% 20%,rgba(184,146,58,0.06) 0%,transparent 40%)}
+.hero-content{position:relative;z-index:1;max-width:680px}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:0.5rem;font-size:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--gold);margin-bottom:1.5rem}
+.hero-title{font-family:var(--font-serif);font-size:clamp(2.5rem,6vw,4rem);font-weight:900;line-height:1.1;margin-bottom:1.25rem;color:var(--white)}
+.hero-title-accent{color:var(--gold);font-style:italic}
+.hero-desc{font-size:1.05rem;color:rgba(255,255,255,0.7);max-width:520px;line-height:1.7;margin-bottom:2rem}
+.hero-actions{display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:3rem}
+.hero-stats{display:flex;align-items:center;gap:2rem}
+.hero-stat{display:flex;flex-direction:column;gap:0.2rem}
+.hero-stat-num{font-family:var(--font-serif);font-size:2rem;font-weight:700;color:var(--gold)}
+.hero-stat-label{font-size:0.75rem;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.08em}
+.hero-stat-divider{width:1px;height:40px;background:rgba(255,255,255,0.15)}
+.section{padding:5rem 0}
+.section-alt{background:var(--cream-dark)}
+.section-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:2.5rem;gap:1rem}
+.cta-banner{background:var(--gold);padding:3.5rem 0}
+.cta-inner{display:flex;align-items:center;justify-content:space-between;gap:2rem;flex-wrap:wrap}
+.cta-banner h2{font-family:var(--font-serif);font-size:1.5rem;color:var(--on-surface-dark);margin-bottom:0.4rem}
+.cta-banner p{color:rgba(255,255,255,0.8);font-size:0.9rem}
+@media(max-width:768px){.section-header{flex-direction:column;align-items:flex-start}.hero-stats{flex-direction:column;align-items:flex-start;gap:1rem}.hero-stat-divider{display:none}}
