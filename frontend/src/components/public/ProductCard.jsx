@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { Clock, Star, X, ExternalLink } from 'lucide-react';
 import { CATEGORY_ICONS } from '../../utils/constants';
-//import ProductModal from './ProductModal';
+import ProductModal from './ProductModal';
 import ProductViewModal from './ProductViewModal';
 import './ProductCard.css';
 
