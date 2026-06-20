@@ -1,0 +1,125 @@
+.seller-auth-page {
+  min-height: 100vh;
+  background: var(--cream);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.seller-auth-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 8px 32px rgba(13,13,13,0.08);
+}
+
+.seller-auth-card-wide { max-width: 720px; }
+
+.seller-auth-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.seller-auth-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-serif);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+  margin-bottom: 1.25rem;
+}
+.seller-auth-logo svg { color: var(--gold); }
+
+.seller-auth-header h1 {
+  font-family: var(--font-serif);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 0.3rem;
+}
+
+.seller-auth-header p { font-size: 0.875rem; color: var(--ink-muted); }
+
+.seller-auth-form { display: flex; flex-direction: column; gap: 1.1rem; }
+
+.form-section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+  margin-top: 0.25rem;
+}
+
+.input-wrap { position: relative; }
+.input-icon-left {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-muted);
+  pointer-events: none;
+}
+.pw-toggle {
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  transition: border-color var(--transition);
+  min-height: 48px;
+}
+.upload-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+.upload-thumb-circle {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.upload-thumb-wide {
+  width: 100%; height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.seller-auth-note {
+  background: var(--gold-pale);
+  border-left: 3px solid var(--gold);
+  padding: 0.75rem 1rem;
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  border-radius: var(--radius);
+}
+
+.seller-auth-switch {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  margin-top: 0.25rem;
+}
+.seller-auth-switch a { color: var(--gold); font-weight: 600; }

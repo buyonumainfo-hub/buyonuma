@@ -1,0 +1,54 @@
+.seller-profile-page { display: flex; flex-direction: column; gap: 1.5rem; max-width: 700px; }
+
+.seller-profile-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+}
+
+.seller-profile-header {
+  display: flex; align-items: center; gap: 1rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.seller-profile-icon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: var(--gold-pale); color: var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.seller-profile-header h2 { font-family: var(--font-serif); font-size: 1.1rem; font-weight: 700; margin-bottom: 0.2rem; }
+.seller-profile-header p  { font-size: 0.82rem; color: var(--ink-muted); }
+
+.seller-profile-form { display: flex; flex-direction: column; gap: 1.1rem; }
+
+.profile-upload-box {
+  display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 0.4rem;
+  padding: 1rem;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  cursor: pointer; font-size: 0.82rem; color: var(--ink-muted);
+  transition: border-color var(--transition);
+  min-height: 80px;
+}
+.profile-upload-box:hover { border-color: var(--gold); color: var(--gold); }
+.profile-upload-wide { width: 100%; }
+
+.profile-upload-circle { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; }
+.profile-upload-banner { width: 100%; height: 56px; border-radius: 6px; object-fit: cover; }
+
+/* Readonly card */
+.seller-readonly-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 2rem;
+}
+.seller-readonly-card h3 { font-family: var(--font-serif); font-size: 1rem; font-weight: 700; margin-bottom: 0.85rem; }
+.readonly-rows { display: flex; flex-direction: column; gap: 0.6rem; }
+.readonly-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
+.readonly-row span { color: var(--ink-muted); }
+.readonly-row code { background: var(--cream-dark); padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.8rem; }
