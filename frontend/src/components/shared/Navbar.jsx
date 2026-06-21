@@ -31,7 +31,7 @@ const Navbar = () => {
           ))}
           <Link to="/become-a-seller" className="btn btn-outline btn-sm" onClick={close}><Store size={14}/> Sell Here</Link>
           <Link to="/seller/login" className="btn btn-outline btn-sm" onClick={close}>Seller Login</Link>
-          <Link to="/admin" className="btn btn-gold btn-sm" onClick={close}>Admin</Link>
+        
           <button
             className="theme-toggle"
             onClick={toggleTheme}
