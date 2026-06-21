@@ -1,4 +1,4 @@
-.admin-layout{display:flex;min-height:100vh;background:#f5f4f0}
+.admin-layout{display:flex;min-height:100vh;background:var(--font-serif)}
 .admin-sidebar{width:240px;background:var(--surface-dark);display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:200;transition:transform 0.25s ease}
 .admin-sidebar-header{padding:1.25rem;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:space-between}
 .admin-logo{display:flex;align-items:center;gap:0.6rem}

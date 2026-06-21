@@ -47,7 +47,7 @@ const SellerLogin = () => {
             <div className="input-wrap">
               <User size={15} className="input-icon-left" />
               <input className="form-control" required placeholder="yourusername"
-                value={form.username} onChange={e => setForm({ ...form, username: e.target.value })}
+                value={form.username} onChange={e => setForm({ ...form, username:  e.target.value.toLowerCase().replace(/\s/g, '') })}
                 style={{ paddingLeft: '2.5rem' }} />
             </div>
           </div>

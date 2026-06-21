@@ -38,7 +38,7 @@ export default function ProductViewModal({ product, onClose }) {
                 <img src={images[activeIdx]} alt={product.name} className="pvm-main-image" />
                 {images.length > 1 && (
                   <>
-                    <button className="pvm-nav pvm-nav-left" onClick={prev}><ChevronLeft size={20}/></button>
+                    <button className="pvm-nav pvm-nav-left" style={{color: "white"}} onClick={prev}><ChevronLeft size={20}/></button>
                     <button className="pvm-nav pvm-nav-right" onClick={next}><ChevronRight size={20}/></button>
                     <span className="pvm-counter">{activeIdx+1} / {images.length}</span>
                   </>
