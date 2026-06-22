@@ -177,7 +177,7 @@ const ContactDeveloper = () => {
         </div>
       </section>
 
-      <Footer />
+    
     </>
   );
 };

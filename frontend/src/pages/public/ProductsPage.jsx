@@ -100,13 +100,17 @@ return (
 </div>
 </div>
 </div>
-<div className="category-pills">
-{CATEGORIES.map(cat => (
-<button key={cat} className={`category-pill ${category===cat?'active':''}`} onClick={() => handleCategory(cat)}>
-<span>{CATEGORY_ICONS[cat]}</span>{cat}
-</button>
-))}
-</div>
+ <div className="category-scroll">
+          {CATEGORIES.map(cat => (
+            <button key={cat}
+              className={`category-chip ${category===cat?'active':''}`}
+              onClick={() => handleCategory(cat)}
+              title={cat}>
+              <span className="category-chip-icon">{CATEGORY_ICONS[cat]}</span>
+              <span className="category-chip-label">{cat}</span>
+            </button>
+          ))}
+        </div>
 {total !== null && !loadingInit && <p className="results-count">{total} product{total!==1?'s':''} found</p>}
 {loadingInit && <div className="grid-4 product-grid">{Array.from({length:8}).map((_,i)=><div key={i} className="skeleton-card"/>)}</div>}
 {!loadingInit && products.length===0 && <div className="empty-state"><p>No products found.</p></div>}
@@ -115,7 +119,7 @@ return (
 {loadingMore && <div className="infinite-loading"><Loader2 size={22} className="spinning"/><span>Loading more…</span></div>}
 {!hasMoreRef.current && products.length>0 && !loadingMore && <p className="end-of-results">— You've seen all {total} products —</p>}
 </div>
-<Footer/>
+
 </>
 );
 }

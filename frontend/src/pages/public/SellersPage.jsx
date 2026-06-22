@@ -193,17 +193,17 @@ const SellersPage = () => {
         </div>
 
         {/* Category pills */}
-        <div className="category-pills">
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat}
-              className={`category-pill ${category === cat ? 'active' : ''}`}
-              onClick={() => handleCategoryChange(cat)}
-            >
-              <span>{CATEGORY_ICONS[cat]}</span>{cat}
-            </button>
-          ))}
-        </div>
+  <div className="category-scroll">
+           {CATEGORIES.map(cat => (
+             <button key={cat}
+               className={`category-chip ${category===cat?'active':''}`}
+               onClick={() => handleCategoryChange(cat)}
+               title={cat}>
+               <span className="category-chip-icon">{CATEGORY_ICONS[cat]}</span>
+               <span className="category-chip-label">{cat}</span>
+             </button>
+           ))}
+         </div>
 
         {/* Results count */}
         {total !== null && !loadingInit && (
@@ -252,7 +252,7 @@ const SellersPage = () => {
         )}
       </div>
 
-      <Footer />
+     
     </>
   );
 };

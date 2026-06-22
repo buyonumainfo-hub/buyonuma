@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { SellerAuthProvider, useSellerAuth } from './context/SellerAuthContext';
 import PWAInstallPrompt from './components/shared/InstallPrompt';
 import { ThemeProvider } from './context/ThemeContext';
+import BottomNav from './components/shared/BottomNav';
 
 // Public pages
 import HomePage           from './pages/public/HomePage';
@@ -75,6 +76,8 @@ function App() {
           <Toaster position="top-right" toastOptions={toastOpts} />
            {/* PWA install banner — shown on all pages */}
           <PWAInstallPrompt />
+            {/* App-style bottom nav — mobile only */}
+          <BottomNav />
           <Routes>
             {/* ── Public ── */}
             <Route path="/home"                   element={<HomePage />} />

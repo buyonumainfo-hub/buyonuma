@@ -41,6 +41,10 @@ const BecomeSellerPage = () => {
           <p className="become-hero-sub" style={{"color": "var(--font-serif)"}}>
             Reach hundreds of students and staff daily. Set up your store for free and start selling in days.
           </p>
+          <br />
+            <Link to="/seller/register" className="btn btn-outline" style={{color: "var(--font-serif)"}}>
+               Create a seller account <ArrowRight size={15} />
+              </Link>
         </div>
       </section>
 
@@ -93,7 +97,7 @@ const BecomeSellerPage = () => {
         </div>
       </section>
 
-      <Footer />
+      
     </>
   );
 };

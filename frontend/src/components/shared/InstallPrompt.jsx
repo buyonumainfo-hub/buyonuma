@@ -66,7 +66,7 @@ const PWAInstallPrompt = () => {
   const handleDismiss = () => {
     setVisible(false);
     // Don't show again for 7 days
-    localStorage.setItem(DISMISSED_KEY, String(Date.now() + 7 * 24 * 60 * 60 * 1000));
+    localStorage.setItem(DISMISSED_KEY, String(Date.now() + 30 * 60 * 1000));
   };
 
   if (!visible) return null;
@@ -78,9 +78,9 @@ const PWAInstallPrompt = () => {
       </div>
 
       <div className="pwa-banner-text">
-        <p className="pwa-banner-title" style={{'color':'white'}}>Install Buyonuma</p>
+        <p className="pwa-banner-title">Install Buyonuma</p>
         {showIOS ? (
-          <p className="pwa-banner-sub" style={{'color':'white'}}>
+          <p className="pwa-banner-sub">
             Tap <strong>Share</strong> <span className="ios-share">⎙</span> then{' '}
             <strong>"Add to Home Screen"</strong> to install.
           </p>

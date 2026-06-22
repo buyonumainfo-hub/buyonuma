@@ -236,7 +236,7 @@ const SellerDetailPage = () => {
         />
       )}
 
-      <Footer />
+      
     </>
   );
 };

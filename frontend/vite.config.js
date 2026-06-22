@@ -55,7 +55,7 @@ export default defineConfig({
         ],
         screenshots: [
           {
-            src: '/screenshots/home.png',
+            src: '/icons/icon-96x96.png',
             sizes: '1280x720',
             type: 'image/png',
             form_factor: 'wide',

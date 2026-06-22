@@ -54,7 +54,7 @@
 }
 
 .admin-table tbody tr:last-child td { border-bottom: none; }
-.admin-table tbody tr:hover { background: #faf9f6; }
+
 
 .table-seller-info {
   display: flex;
