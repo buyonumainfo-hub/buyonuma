@@ -297,7 +297,7 @@ const cleanExpired = async () => {
 
 router.get('/', async (req, res) => {
 try {
-await cleanExpired();
+//await cleanExpired();
 
 const {
 page = 1, limit = 12,

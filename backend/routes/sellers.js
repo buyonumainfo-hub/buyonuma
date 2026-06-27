@@ -260,16 +260,16 @@ router.get('/user/:username', async (req, res) => {
     if (!seller || !seller.isActive) return res.status(404).json({ success: false, message: 'Seller not found' });
 
     const now = new Date();
-    const hasToken = seller.token_expires_at && new Date(seller.token_expires_at) > now;
+   // const hasToken = seller.token_expires_at && new Date(seller.token_expires_at) > now;
 
     // Only show products if seller has active token
-    const products = hasToken
-      ? await Product.find({
+    // hasToken?
+    const products =  await Product.find({
           seller: seller._id,
           isActive: true,
           $or: [{ expires_at: null }, { expires_at: { $gt: now } }],
         }).populate('seller', 'store_name username profile_picture rating category contact website social_media_handle whatsapp token_expires_at')
-      : [];
+      
 
     const result = { success: true, seller, products };
    await cache.set(cacheKey, result, 30);
