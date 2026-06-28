@@ -3,6 +3,7 @@ import Product from '../models/Product.js';
 import Seller from '../models/Seller.js';
 import { protect, protectSeller } from '../middleware/auth.js';
 import cache from '../utils/cache.js';
+import { isTokenRequired } from '../utils/tokenSetting.js';
 
 const router = express.Router();
 
@@ -311,11 +312,15 @@ const cached = await cache.get(cacheKey);
 if (cached) return res.json(cached);
 
 const now = new Date();
-const activeSellers = await Seller.find({
-isApproved: true,
-isActive: true,
-token_expires_at: { $gt: now },
-}).select('_id rating store_name username profile_picture category whatsapp');
+
+    const tokenRequired = await isTokenRequired();
+
+    // If tokens required: only show products from sellers with active tokens
+    // If tokens disabled: show all products from approved active sellers
+    const sellerFilter = tokenRequired
+      ? { isApproved: true, isActive: true, token_expires_at: { $gt: now } }
+      : { isApproved: true, isActive: true };
+const activeSellers = await Seller.find(sellerFilter).select('_id rating store_name username profile_picture category whatsapp');
 
 const activeSellersIds = activeSellers.map(s => s._id);
 const sellerMap = new Map();

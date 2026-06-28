@@ -79,4 +79,50 @@ router.delete('/tokens/:id', protect, async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
+
+// ─── GET /api/admin/token-setting ────────────────────────────────────────────
+router.get('/token-setting', protect, async (req, res) => {
+  try {
+    const cached = await cache.get('admin:token_required');
+    // Default to true (tokens required) if not explicitly set
+    const tokenRequired = cached === null ? true : cached;
+    res.json({ success: true, tokenRequired });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+// ─── PUT /api/admin/token-setting ────────────────────────────────────────────
+router.put('/token-setting', protect, async (req, res) => {
+  try {
+    const { tokenRequired } = req.body;
+    if (typeof tokenRequired !== 'boolean')
+      return res.status(400).json({ success: false, message: 'tokenRequired must be true or false' });
+
+    // Store with no TTL (persist forever until changed again)
+    await cache.set('admin:token_required', tokenRequired, 60 * 60 * 24 * 365);
+
+    // When disabling tokens: activate ALL approved sellers' products
+    if (!tokenRequired) {
+      const approvedSellers = await Seller.find({ isApproved: true }).select('_id');
+      const ids = approvedSellers.map(s => s._id);
+      await Product.updateMany({ seller: { $in: ids } }, { $set: { isActive: true } });
+    }
+
+    // Bust all product and seller caches so changes reflect immediately
+    await Promise.all([
+      cache.delPrefix('products:'),
+      cache.delPrefix('sellers:'),
+      cache.del('admin:stats'),
+    ]);
+
+    res.json({
+      success: true,
+      tokenRequired,
+      message: tokenRequired
+        ? 'Token system enabled. Sellers must redeem a token for products to appear.'
+        : 'Token system disabled. All approved sellers\' products are now visible.',
+    });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+
 export default router;

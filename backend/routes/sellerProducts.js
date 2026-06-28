@@ -4,6 +4,7 @@ import SellerToken from '../models/SellerToken.js';
 import Seller from '../models/Seller.js';
 import { protectSeller } from '../middleware/auth.js';
 import cache from '../utils/cache.js';
+import { isTokenRequired } from '../utils/tokenSetting.js';
 
 const router = express.Router();
 
@@ -77,13 +78,9 @@ router.get('/token-status', protectSeller, async (req, res) => {
     const seller = await Seller.findById(req.seller.id).select('token_expires_at token_duration_hours');
     if (!seller) return res.status(404).json({ success: false, message: 'Seller not found' });
 
-    const hasActiveToken = seller.token_expires_at && new Date(seller.token_expires_at) > new Date();
-    res.json({
-      success: true,
-      has_active_token:  hasActiveToken,
-      expires_at:        seller.token_expires_at  || null,
-      duration_hours:    seller.token_duration_hours || null,
-    });
+    const tokenRequired  = await isTokenRequired();
+    const hasActiveToken = !tokenRequired || (seller.token_expires_at && new Date(seller.token_expires_at) > new Date());
+    res.json({ success: true, has_active_token: hasActiveToken, token_required: tokenRequired, expires_at: seller.token_expires_at || null, duration_hours: seller.token_duration_hours || null });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -181,7 +178,9 @@ router.post('/products', protectSeller, async (req, res) => {
     if (!sellerDoc?.isApproved) return res.status(403).json({ success: false, message: 'Account must be approved before posting products' });
     const { name, description, price, category, product_image, images, time_frame } = req.body;
     if (!name || price === undefined || !category) return res.status(400).json({ success: false, message: 'Name, price and category required' });
-    const hasToken = sellerDoc.token_expires_at && new Date(sellerDoc.token_expires_at) > new Date();
+
+     const tokenRequired = await isTokenRequired();
+     const hasToken = !tokenRequired || (sellerDoc.token_expires_at && new Date(sellerDoc.token_expires_at) > new Date());
     let imageList = Array.isArray(images) ? images.filter(Boolean) : (product_image ? [product_image] : []);
     if (imageList.length > 5) imageList = imageList.slice(0, 5);
     const product  = new Product({
@@ -191,7 +190,7 @@ router.post('/products', protectSeller, async (req, res) => {
       time_frame: time_frame||'',
       seller: req.seller.id,
       isActive: hasToken,
-      expires_at: hasToken ? sellerDoc.token_expires_at : null,
+    expires_at: hasToken && tokenRequired ? sellerDoc.token_expires_at : null,
       expiry_duration_hours: sellerDoc.token_duration_hours || null,
     });
     await product.save();

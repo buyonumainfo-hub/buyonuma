@@ -3,6 +3,7 @@ import Seller from '../models/Seller.js';
 import Product from '../models/Product.js';
 import { protect } from '../middleware/auth.js';
 import cache from '../utils/cache.js';
+import { isTokenRequired } from '../utils/tokenSetting.js';
 
 const router = express.Router();
 
@@ -230,8 +231,9 @@ router.get('/:id', async (req, res) => {
     const seller = await Seller.findById(req.params.id).select('-password');
     if (!seller || !seller.isActive) return res.status(404).json({ success: false, message: 'Seller not found' });
 
-    const now = new Date();
-    const hasToken = seller.token_expires_at && new Date(seller.token_expires_at) > now;
+      const tokenRequired = await isTokenRequired();
+        const hasToken      = !tokenRequired || (seller.token_expires_at && new Date(seller.token_expires_at) > now);
+       
 
     // Only show products if seller has active token
     const products = hasToken
@@ -260,7 +262,9 @@ router.get('/user/:username', async (req, res) => {
     if (!seller || !seller.isActive) return res.status(404).json({ success: false, message: 'Seller not found' });
 
     const now = new Date();
-    const hasToken = seller.token_expires_at && new Date(seller.token_expires_at) > now;
+    const tokenRequired = await isTokenRequired();
+    const hasToken      = !tokenRequired || (seller.token_expires_at && new Date(seller.token_expires_at) > now);
+       
 
     // Only show products if seller has active token
     const products = hasToken
