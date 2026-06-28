@@ -32,7 +32,7 @@ const AdminLayout = ({ children, title }) => {
           <div className="admin-logo">
             <ShoppingBag size={18} />
             <div>
-              <span className="admin-logo-title">UMA</span>
+              <span className="admin-logo-title" style={{color: "whitesmoke"}}>UMA</span>
               <span className="admin-logo-sub">Admin Panel</span>
             </div>
           </div>

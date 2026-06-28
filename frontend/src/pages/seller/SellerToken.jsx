@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Key, CheckCircle, Clock, ArrowRight, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Key, CheckCircle, Clock, ArrowRight, AlertTriangle, RefreshCw, Zap } from 'lucide-react';
 import SellerLayout from '../../components/seller/SellerLayout';
 import { useSellerAuth } from '../../context/SellerAuthContext';
 import axios from 'axios';
@@ -81,6 +81,28 @@ const SellerToken = () => {
   const waMsg = encodeURIComponent(
     `Hi! I need a new listing token for my seller account.\nStore: ${seller?.store_name} (@${seller?.username})`
   );
+
+    // Token system disabled — products show freely
+    if (tokenStatus && !tokenStatus.token_required){
+       return (
+      <SellerLayout title="Listing Status">
+        <div className="token-page fade-up">
+          <div className="token-status-card">
+            <div className="token-status-header">
+              <Zap size={20} style={{color:'#27ae60'}}/><h3>Token System Disabled</h3>
+            </div>
+            <div className="token-active-info">
+              <CheckCircle size={20} style={{color:'#27ae60',flexShrink:0}}/>
+              <div>
+                <p><strong>Your products are publicly visible!</strong></p>
+                <p style={{fontSize:'0.82rem',color:'var(--ink-muted)',marginTop:'0.2rem'}}>The admin has disabled the token system. All your products are automatically live — no token needed.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </SellerLayout>
+    );
+  }
 
   if (seller && !seller.isApproved) {
     return (

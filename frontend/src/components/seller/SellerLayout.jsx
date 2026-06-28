@@ -31,8 +31,8 @@ const SellerLayout = ({ children, title }) => {
           <div className="seller-sidebar-brand">
             <ShoppingBag size={18} />
             <div>
-              <span className="sidebar-brand-title">UMA</span>
-              <span className="sidebar-brand-sub">Seller Panel</span>
+              <span className="sidebar-brand-title" style={{color: "whitesmoke"}}>UMA</span>
+              <span className="sidebar-brand-sub" >Seller Panel</span>
             </div>
           </div>
           <button className="sidebar-close-btn" onClick={() => setOpen(false)}><X size={18} /></button>
@@ -45,7 +45,7 @@ const SellerLayout = ({ children, title }) => {
               : <div className="seller-sidebar-avatar">{seller.store_name?.[0]?.toUpperCase()}</div>
             }
             <div>
-              <p className="sidebar-store-name">{seller.store_name}</p>
+              <p style={{color: "whitesmoke"}} className="sidebar-store-name">{seller.store_name}</p>
               <span className={`sidebar-status ${seller.isApproved ? 'approved' : 'pending'}`}>
                 {seller.isApproved ? '✓ Approved' : '⏳ Pending Approval'}
               </span>

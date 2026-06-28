@@ -28,3 +28,90 @@
 .token-gen-form{display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;padding:1.25rem;background:var(--cream);border-radius:var(--radius-lg);border:1px solid var(--border)}
 @media(max-width:1024px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:768px){.stats-grid{grid-template-columns:1fr}.dashboard-grid{grid-template-columns:1fr}}
+
+/* ── Token System Toggle Card ─────────────────────────────────────────────── */
+.token-system-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 1.25rem 1.5rem;
+  background: var(--cream);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 1.25rem;
+}
+
+.token-system-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex: 1;
+}
+
+.token-system-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.token-system-title {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.token-system-desc {
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+  line-height: 1.55;
+  max-width: 480px;
+}
+
+.token-system-right {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-shrink: 0;
+}
+
+.token-system-status {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Toggle pill switch */
+.token-toggle-btn {
+  position: relative;
+  width: 52px;
+  height: 28px;
+  border-radius: 100px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.25s ease;
+  flex-shrink: 0;
+}
+.token-toggle-btn.on  { background: var(--gold); }
+.token-toggle-btn.off { background: #27ae60; }
+.token-toggle-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.token-toggle-knob {
+  position: absolute;
+  top: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--on-surface-dark);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  transition: left 0.25s ease;
+}
+.token-toggle-btn.on  .token-toggle-knob { left: 27px; }
+.token-toggle-btn.off .token-toggle-knob { left: 3px; }
