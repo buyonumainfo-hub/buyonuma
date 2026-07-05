@@ -37,9 +37,9 @@ const BecomeSellerPage = () => {
             <Store size={14} style={{ display: 'inline', marginRight: 6 }} />
             Join the Marketplace
           </p>
-          <h1 className="become-hero-title">Become a Seller on<br />Lens University Market</h1>
+          <h1 className="become-hero-title">Become a Seller on buyon<br/> Universal Market Access</h1>
           <p className="become-hero-sub" style={{"color": "var(--font-serif)"}}>
-            Reach hundreds of students and staff daily. Set up your store for free and start selling in days.
+            Reach hundreds of students and local buyers. Set up your store for free and start selling in days.
           </p>
           <br />
             <Link to="/seller/register" className="btn btn-outline" style={{color: "var(--font-serif)"}}>
