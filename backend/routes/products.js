@@ -14,6 +14,12 @@ const cleanExpired = async () => {
     { $set: { isActive: false } }
   );
 };
+const activateAll = async () => {
+  await Product.updateMany(
+    { isActive: false },
+    { $set: { isActive: true } }
+  );
+};
 
 // ─── GET /api/products — public ─────────────────────────────────────────────
 // router.get('/', async (req, res) => {
@@ -298,7 +304,14 @@ const cleanExpired = async () => {
 
 router.get('/', async (req, res) => {
 try {
-await cleanExpired();
+const tokenRequired = await isTokenRequired();
+
+if (tokenRequired) {
+  await cleanExpired();
+}else{
+  await activateAll();
+}
+
 
 const {
 page = 1, limit = 12,
@@ -313,20 +326,16 @@ if (cached) return res.json(cached);
 
 const now = new Date();
 
-    const tokenRequired = await isTokenRequired();
 
-    // If tokens required: only show products from sellers with active tokens
-    // If tokens disabled: show all products from approved active sellers
-    const sellerFilter = tokenRequired
-      ? { isApproved: true, isActive: true, token_expires_at: { $gt: now } }
-      : { isApproved: true, isActive: true };
-const activeSellers = await Seller.find(sellerFilter).select('_id rating store_name username profile_picture category whatsapp');
+const sellerFilter = tokenRequired
+? { isApproved: true, isActive: true, token_expires_at: { $gt: now } }
+: { isApproved: true, isActive: true };
+const activeSellers = await Seller.find(sellerFilter)
+.select('_id rating store_name username profile_picture category whatsapp');
 
 const activeSellersIds = activeSellers.map(s => s._id);
 const sellerMap = new Map();
-activeSellers.forEach(s => {
-sellerMap.set(s._id.toString(), s);
-});
+activeSellers.forEach(s => sellerMap.set(s._id.toString(), s));
 
 const query = {
 isActive: true,
@@ -355,97 +364,69 @@ const pageNum = parseInt(page);
 let products = [];
 
 if (sort === 'tiktokScore') {
-// Per-page ratios: 40% new, 40% high-rated seller, 20% random
-const newCount = Math.round(limitNum * 0.4);
-const highRatedCount = Math.round(limitNum * 0.4);
-const randomCount = limitNum - newCount - highRatedCount;
-
+// Build the FULL ordered list once, then paginate that single list
+// like normal. This guarantees every product in `query` appears
+// exactly once across all pages (fixes missing products + slow
+// surfacing of new items).
 const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 const highRatedSellerIds = activeSellers
 .filter(s => (s.rating || 0) >= 4)
 .map(s => s._id);
+const highRatedSet = new Set(highRatedSellerIds.map(id => id.toString()));
 
-// --- Build three non-overlapping pools, each in a stable order ---
-
-// 1. New products pool
-let newPool = [];
-if (newCount > 0) {
-newPool = await Product.find({ ...query, createdAt: { $gte: oneWeekAgo } })
+const allProducts = await Product.find(query)
 .sort({ createdAt: -1, _id: 1 })
 .lean();
-newPool = deterministicShuffle(newPool, 1);
+
+const newPool = [];
+const highRatedPool = [];
+const randomPool = [];
+
+for (const p of allProducts) {
+const isNew = p.createdAt && p.createdAt >= oneWeekAgo;
+const isHighRated = highRatedSet.has(p.seller.toString());
+
+if (isNew) newPool.push(p);
+else if (isHighRated) highRatedPool.push(p);
+else randomPool.push(p);
 }
 
-// 2. High-rated seller products pool (exclude products already in newPool)
-let highRatedPool = [];
-if (highRatedCount > 0 && highRatedSellerIds.length > 0) {
-const newPoolIds = newPool.map(p => p._id);
-highRatedPool = await Product.find({
-...query,
-seller: { $in: highRatedSellerIds },
-_id: { $nin: newPoolIds }
-})
-.sort({ createdAt: -1, _id: 1 })
-.lean();
-highRatedPool = deterministicShuffle(highRatedPool, 2);
-}
+const shuffledNew = deterministicShuffle(newPool, 1);
+const shuffledHighRated = deterministicShuffle(highRatedPool, 2);
+const shuffledRandom = deterministicShuffle(randomPool, 3);
 
-// 3. Random pool (exclude products already in newPool or highRatedPool)
-let randomPool = [];
-if (randomCount > 0) {
-const excludedIds = [
-...newPool.map(p => p._id),
-...highRatedPool.map(p => p._id)
-];
-randomPool = await Product.find({
-...query,
-_id: { $nin: excludedIds }
-})
-.sort({ _id: 1 })
-.lean();
-randomPool = deterministicShuffle(randomPool, 3);
-}
+// Interleave the FULL pools once into a single master ordered list,
+// roughly 40/40/20, backfilling from whichever pool still has items
+// once one runs dry.
+const master = [];
+const pattern = ['new', 'new', 'high', 'high', 'random'];
+let ni = 0, hi = 0, ri = 0, patternIdx = 0;
+const remaining = () =>
+ni < shuffledNew.length || hi < shuffledHighRated.length || ri < shuffledRandom.length;
 
-// --- Slice each pool for this page (no overlap across pages) ---
-const newSkip = (pageNum - 1) * newCount;
-const highRatedSkip = (pageNum - 1) * highRatedCount;
-const randomSkip = (pageNum - 1) * randomCount;
+while (remaining()) {
+const bucket = pattern[patternIdx % pattern.length];
+patternIdx++;
 
-const newSlice = newPool.slice(newSkip, newSkip + newCount);
-const highRatedSlice = highRatedPool.slice(highRatedSkip, highRatedSkip + highRatedCount);
-const randomSlice = randomPool.slice(randomSkip, randomSkip + randomCount);
-
-// --- Interleave in 40/40/20 visual order ---
-let combined = [];
-const maxLen = Math.max(newSlice.length, highRatedSlice.length, randomSlice.length);
-for (let i = 0; i < maxLen; i++) {
-if (newSlice[i]) combined.push(newSlice[i]);
-if (highRatedSlice[i]) combined.push(highRatedSlice[i]);
-if (randomSlice[i]) combined.push(randomSlice[i]);
-}
-
-// --- Backfill if any bucket ran short (e.g. not enough new products) ---
-if (combined.length < limitNum) {
-const usedIds = new Set(combined.map(p => p._id.toString()));
-const remaining = [
-...newPool.slice(newSkip + newCount),
-...highRatedPool.slice(highRatedSkip + highRatedCount),
-...randomPool.slice(randomSkip + randomCount),
-];
-for (const p of remaining) {
-if (combined.length >= limitNum) break;
-const id = p._id.toString();
-if (!usedIds.has(id)) {
-combined.push(p);
-usedIds.add(id);
-}
+if (bucket === 'new' && ni < shuffledNew.length) {
+master.push(shuffledNew[ni++]);
+} else if (bucket === 'high' && hi < shuffledHighRated.length) {
+master.push(shuffledHighRated[hi++]);
+} else if (bucket === 'random' && ri < shuffledRandom.length) {
+master.push(shuffledRandom[ri++]);
+} else if (ni < shuffledNew.length) {
+master.push(shuffledNew[ni++]);
+} else if (hi < shuffledHighRated.length) {
+master.push(shuffledHighRated[hi++]);
+} else if (ri < shuffledRandom.length) {
+master.push(shuffledRandom[ri++]);
 }
 }
 
-products = combined.slice(0, limitNum);
+const start = (pageNum - 1) * limitNum;
+products = master.slice(start, start + limitNum);
 
-} else {
-if (sort === 'rating') {
+} else if (sort === 'rating') {
 products = await Product.aggregate([
 { $match: query },
 {
@@ -471,7 +452,6 @@ products = await Product.find(query)
 .skip((pageNum - 1) * limitNum)
 .limit(limitNum)
 .lean();
-}
 }
 
 // Attach seller data
