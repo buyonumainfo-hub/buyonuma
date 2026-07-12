@@ -9,7 +9,7 @@ import morgan from 'morgan';
 import hpp from 'hpp';
 
 //import authRoutes         from './routes/auth.js';
-import sellerAuthRoutes   from './routes/sellerAuth.js';
+/*import sellerAuthRoutes   from './routes/sellerAuth.js';
 import sellerRoutes       from './routes/sellers.js';
 import productRoutes      from './routes/products.js';
 import adminRoutes        from './routes/admin.js';
@@ -22,7 +22,7 @@ import aiChatRoutes       from './routes/aiChat.js';
 import monitoringRoutes   from './routes/monitoring.js';
 import metaRoutes         from './routes/meta.js';
 import contactRoutes      from './routes/contact.js';
-
+*/
 import { generalLimiter } from './middleware/rateLimiter.js';
 import { sanitizeInput, preventNoSQLInjection } from './middleware/sanitize.js';
 
@@ -85,7 +85,7 @@ app.use('/api/', generalLimiter);
 
 // ── Routes ────────────────────────────────────────────────────────────────
 //app.use('/api/auth',          authRoutes);
-app.use('/api/seller-auth',   sellerAuthRoutes);
+/*app.use('/api/seller-auth',   sellerAuthRoutes);
 app.use('/api/sellers',       sellerRoutes);
 app.use('/api/products',      productRoutes);
 app.use('/api/admin',         adminRoutes);
@@ -98,7 +98,7 @@ app.use('/api/ai-chat',       aiChatRoutes);
 app.use('/api/monitoring',    monitoringRoutes);
 app.use('/api/meta',          metaRoutes);
 app.use('/api/contact',       contactRoutes);
-
+*/
 app.get('/', (_, res) => res.json({ status: 'ok', message: 'buy on uma api running' }));
 
 // Lightweight health check for load balancer / uptime monitoring —
