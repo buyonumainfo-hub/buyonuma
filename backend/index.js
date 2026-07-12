@@ -65,8 +65,8 @@ if (allowedOrigins.length === 0 && process.env.NODE_ENV === 'production') {
 app.use(cors())
 
 // ── Compression + logging ───────────────────────────────────────────────
-app.use(compression());
-app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+//app.use(compression());
+//app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // ── Body parsing ─────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
@@ -76,9 +76,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Order matters: sanitize HTML/XSS first, then strip Mongo operator
 // injection, then hpp guards against HTTP parameter pollution
 // (?category=A&category=B tricks on array-unaware handlers).
-app.use(sanitizeInput);
-app.use(preventNoSQLInjection);
-app.use(hpp());
+//app.use(sanitizeInput);
+//app.use(preventNoSQLInjection);
+//app.use(hpp());
 
 // ── General rate limiting (per-route limiters layer on top of this) ─────
 app.use('/api/', generalLimiter);
@@ -114,16 +114,16 @@ app.use((req, res) => {
 // ── Global error handler ────────────────────────────────────────────────
 // Catches anything that slips past individual route try/catch blocks
 // (e.g. malformed JSON body) so the process never crashes on a bad request.
-app.use((err, req, res, next) => {
-  if (err.message === 'Not allowed by CORS') {
-    return res.status(403).json({ success: false, message: 'Origin not allowed' });
-  }
-  if (err.type === 'entity.parse.failed') {
-    return res.status(400).json({ success: false, message: 'Invalid JSON in request body' });
-  }
-  console.error('Unhandled error:', err);
-  res.status(500).json({ success: false, message: 'Something went wrong. Please try again.' });
-});
+// app.use((err, req, res, next) => {
+//   if (err.message === 'Not allowed by CORS') {
+//     return res.status(403).json({ success: false, message: 'Origin not allowed' });
+//   }
+//   if (err.type === 'entity.parse.failed') {
+//     return res.status(400).json({ success: false, message: 'Invalid JSON in request body' });
+//   }
+//   console.error('Unhandled error:', err);
+//   res.status(500).json({ success: false, message: 'Something went wrong. Please try again.' });
+// });
 
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
