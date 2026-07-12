@@ -2,6 +2,24 @@ import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 dotenv.config();
 
+/**
+ * Escapes text for safe embedding inside an HTML email body. Needed
+ * because the request sanitizer (middleware/sanitize.js) intentionally
+ * decodes HTML entities on the way in (so plain-text fields like "Food &
+ * Beverages" aren't corrupted into "Food &amp; Beverages"), which means
+ * strings arriving here may contain literal &, <, > characters again.
+ * Any string sourced from user input must be escaped here before being
+ * interpolated into an HTML template, so it can't distort the email
+ * markup.
+ */
+const escapeHtml = (str = '') =>
+  String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
 // Creates a transporter. Falls back to Ethereal (fake SMTP) when env vars are missing,
 // so the app starts without crashing even during development.
 const createTransporter = async () => {
@@ -72,7 +90,7 @@ export const sendSellerWelcomeEmail = async ({ to, store_name, username }) => {
     <p>UMA — Seller Portal</p>
   </div>
   <div class="body">
-    <h2>Welcome aboard, ${store_name}! 🎉</h2>
+    <h2>Welcome aboard, ${escapeHtml(store_name)}! 🎉</h2>
     <p>Hi <strong>@${username}</strong>, your seller account has been created successfully. You're one step away from listing your products on the Lens University marketplace.</p>
 
     <p><strong>Here's what happens next:</strong></p>
@@ -143,7 +161,7 @@ export const sendPasswordResetEmail = async ({ to, store_name, code }) => {
 <div class="wrap">
   <div class="header"><h1>Universal Market Access</h1></div>
   <div class="body">
-    <p>Hi <strong>${store_name}</strong>,</p>
+    <p>Hi <strong>${escapeHtml(store_name)}</strong>,</p>
     <p>We received a request to reset your seller account password. Use the code below:</p>
     <div class="code-box"><span class="code">${code}</span></div>
     <p class="expire">This code expires in <strong>10 minutes</strong>.</p>
@@ -163,4 +181,88 @@ export const sendPasswordResetEmail = async ({ to, store_name, code }) => {
     console.error('❌ Failed to send reset email:', err.message);
     throw err; // rethrow so the caller can tell the user
   }
+};
+
+/**
+ * Send a general contact/support email from a visitor to the admin inbox.
+ */
+export const sendContactEmail = async ({ name, email, message }) => {
+  try {
+    const transporter = await getTransporter();
+    const fromName  = process.env.SMTP_FROM_NAME || 'buyonuma';
+    const fromEmail = process.env.SMTP_USER      || 'noreply@lensuniversity.edu.ng';
+    const adminEmail = process.env.ADMIN_EMAIL   || fromEmail;
+
+    const info = await transporter.sendMail({
+      from: `"${fromName}" <${fromEmail}>`,
+      to: adminEmail,
+      replyTo: email,
+      subject: `New contact form message from ${name}`,
+      html: `
+<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
+  <h2 style="color:#0d0d0d;">New Contact Message</h2>
+  <p><strong>From:</strong> ${escapeHtml(name)} (${escapeHtml(email)})</p>
+  <p style="white-space:pre-wrap;background:#faf8f3;padding:16px;border-radius:8px;">${escapeHtml(message)}</p>
+</div>`,
+    });
+
+    if (process.env.NODE_ENV !== 'production') {
+      const url = nodemailer.getTestMessageUrl(info);
+      if (url) console.log('📧 Contact email preview:', url);
+    }
+  } catch (err) {
+    console.error('❌ Failed to send contact email:', err.message);
+    throw err;
+  }
+};
+
+/**
+ * Broadcast an email to every address in `recipients`. Sent in small
+ * batches with a short delay between batches so we don't get rate-limited
+ * or flagged as spam by the SMTP provider, and so one slow/failed send
+ * doesn't hold up the whole broadcast. Returns a summary the admin UI can
+ * show ("Sent to 480/500").
+ */
+export const sendBroadcastEmail = async ({ recipients, subject, message }) => {
+  const transporter = await getTransporter();
+  const fromName  = process.env.SMTP_FROM_NAME || 'buyonuma';
+  const fromEmail = process.env.SMTP_USER      || 'noreply@lensuniversity.edu.ng';
+
+  const BATCH_SIZE = 25;
+  const DELAY_MS   = 1200;
+  let sent = 0;
+  let failed = 0;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"/></head>
+<body style="font-family:'Segoe UI',Arial,sans-serif;background:#f5f4f0;margin:0;padding:0;">
+  <div style="max-width:560px;margin:40px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+    <div style="background:#0d0d0d;padding:28px 36px;text-align:center;">
+      <h1 style="color:#b8923a;font-size:1.2rem;margin:0;font-family:Georgia,serif;">BuyOnUma</h1>
+    </div>
+    <div style="padding:32px 36px;">
+      <div style="font-size:0.92rem;color:#333;line-height:1.7;white-space:pre-wrap;">${message}</div>
+    </div>
+    <div style="background:#f5f4f0;padding:16px 36px;text-align:center;font-size:0.72rem;color:#aaa;">
+      © ${new Date().getFullYear()} BuyOnUma · You're receiving this because you have an account on BuyOnUma.
+    </div>
+  </div>
+</body>
+</html>`;
+
+  for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
+    const batch = recipients.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(
+      batch.map((to) => transporter.sendMail({ from: `"${fromName}" <${fromEmail}>`, to, subject, html }))
+    );
+    results.forEach((r) => (r.status === 'fulfilled' ? sent++ : failed++));
+
+    if (i + BATCH_SIZE < recipients.length) {
+      await new Promise((resolve) => setTimeout(resolve, DELAY_MS));
+    }
+  }
+
+  return { sent, failed, total: recipients.length };
 };

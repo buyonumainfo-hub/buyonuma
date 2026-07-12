@@ -1,10 +1,14 @@
 import express from 'express';
 import crypto from 'crypto';
+import { body } from 'express-validator';
 import Seller from '../models/Seller.js';
 import Product from '../models/Product.js';
 import SellerToken from '../models/SellerToken.js';
 import { protect } from '../middleware/auth.js';
 import cache from '../utils/cache.js';
+import { writeLimiter } from '../middleware/rateLimiter.js';
+import { mongoIdParam } from '../middleware/validators.js';
+import { validate } from '../middleware/validate.js';
 
 const router = express.Router();
 
@@ -32,11 +36,14 @@ router.get('/stats', protect, async (req, res) => {
 });
 
 // ─── POST /api/admin/tokens — generate token ────────────────────────────────
-router.post('/tokens', protect, async (req, res) => {
+router.post('/tokens', protect, writeLimiter,
+  body('duration_hours').isFloat({ gt: 0, max: 8760 }).withMessage('duration_hours required and must be > 0'),
+  body('label').optional().isLength({ max: 200 }),
+  body('token_expires_hours').optional().isFloat({ gt: 0, max: 8760 }),
+  validate,
+  async (req, res) => {
   try {
     const { duration_hours, label, token_expires_hours = 72 } = req.body;
-    if (!duration_hours || Number(duration_hours) <= 0)
-      return res.status(400).json({ success: false, message: 'duration_hours required and must be > 0' });
 
     const token = crypto.randomBytes(12).toString('hex').toUpperCase();
     const tokenDoc = new SellerToken({
@@ -71,7 +78,7 @@ router.get('/tokens', protect, async (req, res) => {
 });
 
 // ─── DELETE /api/admin/tokens/:id ───────────────────────────────────────────
-router.delete('/tokens/:id', protect, async (req, res) => {
+router.delete('/tokens/:id', protect, writeLimiter, mongoIdParam('id'), validate, async (req, res) => {
   try {
     await SellerToken.findByIdAndDelete(req.params.id);
   await cache.del('admin:tokens');
@@ -91,12 +98,12 @@ router.get('/token-setting', protect, async (req, res) => {
 });
 
 // ─── PUT /api/admin/token-setting ────────────────────────────────────────────
-router.put('/token-setting', protect, async (req, res) => {
+router.put('/token-setting', protect, writeLimiter,
+  body('tokenRequired').isBoolean().withMessage('tokenRequired must be true or false'),
+  validate,
+  async (req, res) => {
   try {
     const { tokenRequired } = req.body;
-    if (typeof tokenRequired !== 'boolean')
-      return res.status(400).json({ success: false, message: 'tokenRequired must be true or false' });
-
     // Store with no TTL (persist forever until changed again)
     await cache.set('admin:token_required', tokenRequired, 60 * 60 * 24 * 365);
 

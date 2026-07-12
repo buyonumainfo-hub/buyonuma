@@ -1,44 +1,62 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import Admin from '../models/Admin.js';
-import { protect } from '../middleware/auth.js';
+import { protect, JWT_SECRET_GETTER } from '../middleware/auth.js';
+import { authLimiter } from '../middleware/rateLimiter.js';
+import { adminLoginValidators, adminChangePasswordValidators } from '../middleware/validators.js';
+import { validate } from '../middleware/validate.js';
+import { logActivity } from '../utils/activityLog.js';
 
 const router = express.Router();
 
-// Init default admin
+// Init default admin.
+// SECURITY: refuse to boot with a guessable default password in production —
+// this previously silently created "admin / admin123" if env vars were unset.
 const initAdmin = async () => {
   try {
     const count = await Admin.countDocuments();
     if (count === 0) {
-      const admin = new Admin({
-        username: process.env.ADMIN_USERNAME || 'admin',
-        password: process.env.ADMIN_PASSWORD || 'admin123'
-      });
+      const username = process.env.ADMIN_USERNAME || 'admin';
+      const password = process.env.ADMIN_PASSWORD;
+      if (!password) {
+        if (process.env.NODE_ENV === 'production') {
+          console.error('❌ FATAL: ADMIN_PASSWORD env var is required in production to create the initial admin account.');
+          process.exit(1);
+        }
+        console.warn('⚠️ ADMIN_PASSWORD not set — using dev-only default "admin123". DO NOT use this in production.');
+      }
+      const admin = new Admin({ username, password: password || 'admin123' });
       await admin.save();
-      console.log('✅ Default admin created — username: admin, password: admin123');
+      console.log(`✅ Default admin created — username: ${username}`);
     }
   } catch (err) { console.error('Error initializing admin:', err); }
 };
 initAdmin();
 
 // POST /api/auth/login — admin login
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, adminLoginValidators, validate, async (req, res) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password)
-      return res.status(400).json({ success: false, message: 'Username and password required' });
 
     const admin = await Admin.findOne({ username });
-    if (!admin) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    if (!admin) {
+      await logActivity({ type: 'admin_login_failed', meta: { username, reason: 'not_found' }, ip: req.ip });
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
 
     const isMatch = await admin.comparePassword(password);
-    if (!isMatch) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    if (!isMatch) {
+      await logActivity({ type: 'admin_login_failed', meta: { username, reason: 'bad_password' }, ip: req.ip });
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
 
     const token = jwt.sign(
       { id: admin._id, username: admin.username, role: 'admin' },
-      process.env.JWT_SECRET || 'fallback_secret',
+      JWT_SECRET_GETTER(),
       { expiresIn: '24h' }
     );
+
+    await logActivity({ type: 'admin_login', meta: { username }, ip: req.ip });
     res.json({ success: true, token, username: admin.username });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -46,13 +64,9 @@ router.post('/login', async (req, res) => {
 });
 
 // PUT /api/auth/change-password
-router.put('/change-password', protect, async (req, res) => {
+router.put('/change-password', protect, adminChangePasswordValidators, validate, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    if (!currentPassword || !newPassword)
-      return res.status(400).json({ success: false, message: 'Both passwords required' });
-    if (newPassword.length < 6)
-      return res.status(400).json({ success: false, message: 'Min 6 characters' });
 
     const admin = await Admin.findById(req.admin.id);
     if (!await admin.comparePassword(currentPassword))

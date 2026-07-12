@@ -4,6 +4,11 @@ import Product from '../models/Product.js';
 import { protect } from '../middleware/auth.js';
 import cache from '../utils/cache.js';
 import { isTokenRequired } from '../utils/tokenSetting.js';
+import { writeLimiter } from '../middleware/rateLimiter.js';
+import { mongoIdParam, sellerApproveValidators, locationQuery } from '../middleware/validators.js';
+import { validate } from '../middleware/validate.js';
+import { logActivity } from '../utils/activityLog.js';
+import { createNotification } from '../utils/notify.js';
 
 const router = express.Router();
 
@@ -35,7 +40,7 @@ const router = express.Router();
 // });
 
 // ─── GET /api/sellers — public (TikTok Smart Mix with sort options) ─────────
-router.get('/', async (req, res) => {
+router.get('/', locationQuery, validate, async (req, res) => {
   try {
     const cacheKey = `sellers:list:${JSON.stringify(req.query)}`;
     const cached = await cache.get(cacheKey);
@@ -48,7 +53,9 @@ router.get('/', async (req, res) => {
       order = 'desc',
       category,
       search,
-      minRating
+      minRating,
+      state,
+      city
     } = req.query;
 
     const query = {
@@ -59,6 +66,10 @@ router.get('/', async (req, res) => {
 
     if (category && category !== 'All') query.category = category;
     if (minRating) query.rating = { $gte: parseFloat(minRating) };
+    // Location filters — used both for an explicit "browse this state/city"
+    // filter and for the "nearest" sort mode below.
+    if (state && state !== 'All') query.state = state;
+    if (city) query.city = { $regex: `^${city}$`, $options: 'i' };
     if (search) query.$or = [
       { store_name:  { $regex: search, $options: 'i' } },
       { username:    { $regex: search, $options: 'i' } },
@@ -71,7 +82,37 @@ router.get('/', async (req, res) => {
 
     let sellers;
 
-    if (sort === 'tiktokScore') {
+    if (sort === 'nearest') {
+      // Location-based sort: sellers in the buyer's exact city first, then
+      // same state, then everyone else — each bucket sorted by rating so
+      // the ordering still feels meaningful within a bucket. Requires
+      // ?state=...&city=... (typically the buyer's auto-detected location).
+      if (!state) {
+        return res.status(400).json({ success: false, message: 'state is required for sort=nearest' });
+      }
+      const baseQuery = { ...query };
+      delete baseQuery.state;
+      delete baseQuery.city;
+
+      const cityQuery = city ? { ...baseQuery, state, city: { $regex: `^${city}$`, $options: 'i' } } : null;
+      const stateQuery = { ...baseQuery, state };
+
+      const [cityMatches, stateMatchesRaw] = await Promise.all([
+        cityQuery ? Seller.find(cityQuery).select('-password').sort({ rating: -1 }).lean() : Promise.resolve([]),
+        Seller.find(stateQuery).select('-password').sort({ rating: -1 }).lean(),
+      ]);
+
+      const cityIds = new Set(cityMatches.map((s) => s._id.toString()));
+      const stateOnlyMatches = stateMatchesRaw.filter((s) => !cityIds.has(s._id.toString()));
+
+      const usedIds = new Set([...cityIds, ...stateOnlyMatches.map((s) => s._id.toString())]);
+      const elsewhereQuery = { ...baseQuery, _id: { $nin: [...usedIds] } };
+      const elsewhereMatches = await Seller.find(elsewhereQuery).select('-password').sort({ rating: -1 }).limit(200).lean();
+
+      const combined = [...cityMatches, ...stateOnlyMatches, ...elsewhereMatches];
+      const skip = (pageNum - 1) * limitNum;
+      sellers = combined.slice(skip, skip + limitNum);
+    } else if (sort === 'tiktokScore') {
       // FIX: Fetch a large pool once and paginate by slicing,
       // instead of 3 separate paginated queries that cause duplicates.
       const POOL_SIZE = 200;
@@ -222,7 +263,7 @@ router.get('/admin/all', protect, async (req, res) => {
 });
 
 // ─── GET /api/sellers/:id — public ──────────────────────────────────────────
-router.get('/:id', async (req, res) => {
+router.get('/:id', mongoIdParam('id'), validate, async (req, res) => {
   try {
     const cacheKey = `seller:${req.params.id}`;
     const cached   =await cache.get(cacheKey);
@@ -231,6 +272,7 @@ router.get('/:id', async (req, res) => {
     const seller = await Seller.findById(req.params.id).select('-password');
     if (!seller || !seller.isActive) return res.status(404).json({ success: false, message: 'Seller not found' });
 
+      const now = new Date();
       const tokenRequired = await isTokenRequired();
         const hasToken      = !tokenRequired || (seller.token_expires_at && new Date(seller.token_expires_at) > now);
        
@@ -282,7 +324,7 @@ router.get('/user/:username', async (req, res) => {
 });
 
 // ─── POST /api/sellers — admin creates seller ────────────────────────────────
-router.post('/', protect, async (req, res) => {
+router.post('/', protect, writeLimiter, async (req, res) => {
   try {
     const data = { ...req.body };
     data.isApproved = true;
@@ -290,7 +332,8 @@ router.post('/', protect, async (req, res) => {
     const seller = new Seller(data);
     await seller.save();
     const out = seller.toObject(); delete out.password;
-  await  cache.delPrefix('sellers:');
+    await cache.delPrefix('sellers:');
+    await logActivity({ type: 'seller_registered', seller: seller._id, meta: { via: 'admin_created' } });
     res.status(201).json({ success: true, seller: out, message: 'Seller created successfully' });
   } catch (err) {
     if (err.code === 11000) return res.status(400).json({ success: false, message: 'Username or email already exists' });
@@ -299,40 +342,55 @@ router.post('/', protect, async (req, res) => {
 });
 
 // ─── PUT /api/sellers/:id — admin updates seller ─────────────────────────────
-router.put('/:id', protect, async (req, res) => {
+router.put('/:id', protect, writeLimiter, mongoIdParam('id'), validate, async (req, res) => {
   try {
     const data = { ...req.body };
     delete data.password;
+    delete data.nin; delete data.ninStatus; delete data.ninProviderRef; // use the dedicated verification endpoint instead
     const seller = await Seller.findByIdAndUpdate(req.params.id, data, { new: true, runValidators: true }).select('-password');
     if (!seller) return res.status(404).json({ success: false, message: 'Seller not found' });
-   await cache.delPrefix('sellers:');
-  await  cache.del(`seller:${req.params.id}`);
+    await cache.delPrefix('sellers:');
+    await cache.del(`seller:${req.params.id}`);
     res.json({ success: true, seller, message: 'Seller updated successfully' });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
 // ─── PATCH /api/sellers/:id/approve — admin approve/suspend ─────────────────
-router.patch('/:id/approve', protect, async (req, res) => {
+router.patch('/:id/approve', protect, writeLimiter, mongoIdParam('id'), sellerApproveValidators, validate, async (req, res) => {
   try {
     const { isApproved } = req.body;
     const seller = await Seller.findByIdAndUpdate(req.params.id, { isApproved }, { new: true }).select('-password');
     if (!seller) return res.status(404).json({ success: false, message: 'Seller not found' });
-  await  cache.delPrefix('sellers:');
-  await  cache.del(`seller:${req.params.id}`);
-   await cache.delPrefix('products:'); // seller approval affects visible products
+    await cache.delPrefix('sellers:');
+    await cache.del(`seller:${req.params.id}`);
+    await cache.delPrefix('products:'); // seller approval affects visible products
+
+    await logActivity({ type: isApproved ? 'seller_approved' : 'seller_suspended', seller: seller._id });
+
+    if (isApproved) {
+      await createNotification({
+        recipientType: 'seller',
+        seller: seller._id,
+        title: 'Your store is approved! 🎉',
+        message: 'Your seller account has been approved. You can now redeem a token and start posting products.',
+        type: 'approval',
+        link: '/seller/dashboard',
+      });
+    }
+
     res.json({ success: true, seller, message: `Seller ${isApproved ? 'approved' : 'suspended'}` });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
 // ─── DELETE /api/sellers/:id ─────────────────────────────────────────────────
-router.delete('/:id', protect, async (req, res) => {
+router.delete('/:id', protect, writeLimiter, mongoIdParam('id'), validate, async (req, res) => {
   try {
     const seller = await Seller.findByIdAndDelete(req.params.id);
     if (!seller) return res.status(404).json({ success: false, message: 'Seller not found' });
     await Product.deleteMany({ seller: req.params.id });
-  await  cache.delPrefix('sellers:');
-  await  cache.del(`seller:${req.params.id}`);
-  await  cache.delPrefix('products:');
+    await cache.delPrefix('sellers:');
+    await cache.del(`seller:${req.params.id}`);
+    await cache.delPrefix('products:');
     res.json({ success: true, message: 'Seller and products deleted' });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });

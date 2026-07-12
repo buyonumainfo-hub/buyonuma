@@ -5,14 +5,23 @@ import Seller from '../models/Seller.js';
 import { protectSeller } from '../middleware/auth.js';
 import cache from '../utils/cache.js';
 import { isTokenRequired } from '../utils/tokenSetting.js';
+import { writeLimiter } from '../middleware/rateLimiter.js';
+import { productCreateValidators, productUpdateValidators, mongoIdParam } from '../middleware/validators.js';
+import { validate } from '../middleware/validate.js';
+import { logActivity } from '../utils/activityLog.js';
+import { body } from 'express-validator';
 
 const router = express.Router();
 
 // ─── POST /api/seller/redeem-token ─────────────────────────────────────────
-router.post('/redeem-token', protectSeller, async (req, res) => {
+// Rate-limited to slow down brute-forcing of token codes (they're random
+// hex but this is cheap insurance against automated guessing).
+router.post('/redeem-token', protectSeller, writeLimiter,
+  body('token').trim().notEmpty().isLength({ max: 64 }).withMessage('Token required'),
+  validate,
+  async (req, res) => {
   try {
     const { token } = req.body;
-    if (!token) return res.status(400).json({ success: false, message: 'Token required' });
 
     // 1. Confirm seller is approved
     const sellerDoc = await Seller.findById(req.seller.id);
@@ -21,23 +30,25 @@ router.post('/redeem-token', protectSeller, async (req, res) => {
     if (!sellerDoc.isApproved)
       return res.status(403).json({ success: false, message: 'Your account is not yet approved by admin' });
 
-    // 2. Find and validate the token
-    const tokenDoc = await SellerToken.findOne({ token: token.trim().toUpperCase() });
-    if (!tokenDoc)
-      return res.status(404).json({ success: false, message: 'Invalid token — check the code and try again' });
-    if (tokenDoc.used)
-      return res.status(400).json({ success: false, message: 'This token has already been used' });
-    if (new Date() > new Date(tokenDoc.expires_at))
+    // 2. Find and validate the token, atomically claiming it to avoid a
+    //    race where two concurrent requests both redeem the same token
+    //    before either write lands.
+    const tokenDoc = await SellerToken.findOneAndUpdate(
+      { token: token.trim().toUpperCase(), used: false, expires_at: { $gt: new Date() } },
+      { $set: { used: true, used_by: req.seller.id, used_at: new Date() } },
+      { new: false } // return the pre-update doc so we still have duration_hours etc.
+    );
+
+    if (!tokenDoc) {
+      // Distinguish "doesn't exist" from "exists but already used/expired" for a clearer message
+      const existing = await SellerToken.findOne({ token: token.trim().toUpperCase() });
+      if (!existing) return res.status(404).json({ success: false, message: 'Invalid token — check the code and try again' });
+      if (existing.used) return res.status(400).json({ success: false, message: 'This token has already been used' });
       return res.status(400).json({ success: false, message: 'This token has expired — ask the admin for a new one' });
+    }
 
     // 3. Compute new expiry
     const expiresAt = new Date(Date.now() + tokenDoc.duration_hours * 60 * 60 * 1000);
-
-    // 4. Mark token used
-    tokenDoc.used    = true;
-    tokenDoc.used_by = req.seller.id;
-    tokenDoc.used_at = new Date();
-    await tokenDoc.save();
 
     // 5. Store expiry directly on the seller — single source of truth
     sellerDoc.token_expires_at    = expiresAt;
@@ -60,6 +71,8 @@ router.post('/redeem-token', protectSeller, async (req, res) => {
    await cache.delPrefix('products:');
   await  cache.delPrefix(`seller:${req.seller.id}`);
   await  cache.delPrefix('sellers:');
+
+    await logActivity({ type: 'token_redeemed', seller: req.seller.id, meta: { duration_hours: tokenDoc.duration_hours } });
 
     res.json({
       success: true,
@@ -172,12 +185,11 @@ router.get('/products', protectSeller, async (req, res) => {
 // });
 
 
-router.post('/products', protectSeller, async (req, res) => {
+router.post('/products', protectSeller, writeLimiter, productCreateValidators, validate, async (req, res) => {
   try {
     const sellerDoc = await Seller.findById(req.seller.id);
     if (!sellerDoc?.isApproved) return res.status(403).json({ success: false, message: 'Account must be approved before posting products' });
     const { name, description, price, category, product_image, images, time_frame } = req.body;
-    if (!name || price === undefined || !category) return res.status(400).json({ success: false, message: 'Name, price and category required' });
 
      const tokenRequired = await isTokenRequired();
      const hasToken = !tokenRequired || (sellerDoc.token_expires_at && new Date(sellerDoc.token_expires_at) > new Date());
@@ -194,13 +206,14 @@ router.post('/products', protectSeller, async (req, res) => {
       expiry_duration_hours: sellerDoc.token_duration_hours || null,
     });
     await product.save();
-    await product.populate('seller','store_name username profile_picture rating whatsapp');
+    await product.populate('seller','store_name username profile_picture rating whatsapp contact ninStatus');
     await cache.delPrefix('products:');
+    await logActivity({ type: 'product_added', seller: req.seller.id, product: product._id, meta: { name, price } });
     res.status(201).json({ success: true, product, message: hasToken ? 'Product posted and live!' : 'Product saved. Redeem a token to make it visible.' });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.put('/products/:id', protectSeller, async (req, res) => {
+router.put('/products/:id', protectSeller, writeLimiter, mongoIdParam('id'), productUpdateValidators, validate, async (req, res) => {
   try {
     const product = await Product.findOne({ _id: req.params.id, seller: req.seller.id });
     if (!product) return res.status(404).json({ success: false, message: 'Product not found or not yours' });
@@ -211,8 +224,9 @@ router.put('/products/:id', protectSeller, async (req, res) => {
       product.product_image = product.images[0] || '';
     }
     await product.save();
-    await product.populate('seller','store_name username profile_picture rating whatsapp');
+    await product.populate('seller','store_name username profile_picture rating whatsapp contact ninStatus');
     await cache.delPrefix('products:');
+    await logActivity({ type: 'product_updated', seller: req.seller.id, product: product._id });
     res.json({ success: true, product, message: 'Product updated' });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });

@@ -4,6 +4,10 @@ import Seller from '../models/Seller.js';
 import { protect, protectSeller } from '../middleware/auth.js';
 import cache from '../utils/cache.js';
 import { isTokenRequired } from '../utils/tokenSetting.js';
+import { writeLimiter } from '../middleware/rateLimiter.js';
+import { productCreateValidators, productUpdateValidators, mongoIdParam, locationQuery } from '../middleware/validators.js';
+import { validate } from '../middleware/validate.js';
+import { logActivity } from '../utils/activityLog.js';
 
 const router = express.Router();
 
@@ -16,7 +20,7 @@ const cleanExpired = async () => {
 };
 const activateAll = async () => {
   await Product.updateMany(
-    { isActive: false },
+    { isActive: false},
     { $set: { isActive: true } }
   );
 };
@@ -302,22 +306,22 @@ const activateAll = async () => {
 
 // new
 
-router.get('/', async (req, res) => {
+router.get('/', locationQuery, validate, async (req, res) => {
 try {
-const tokenRequired = await isTokenRequired();
-
-if (tokenRequired) {
-  await cleanExpired();
-}else{
-  await activateAll();
-}
+   const tokenRequired = await isTokenRequired();
+   if (tokenRequired) {
+    await cleanExpired();
+   }else{
+       await activateAll();
+   }
 
 
 const {
 page = 1, limit = 12,
 sort = 'tiktokScore',
 order = 'desc',
-category, search, seller, minPrice, maxPrice
+category, search, seller, minPrice, maxPrice,
+state, city
 } = req.query;
 
 const cacheKey = `products:list:${JSON.stringify(req.query)}`;
@@ -326,16 +330,29 @@ if (cached) return res.json(cached);
 
 const now = new Date();
 
+   // const tokenRequired = await isTokenRequired();
 
-const sellerFilter = tokenRequired
-? { isApproved: true, isActive: true, token_expires_at: { $gt: now } }
-: { isApproved: true, isActive: true };
-const activeSellers = await Seller.find(sellerFilter)
-.select('_id rating store_name username profile_picture category whatsapp');
+    // If tokens required: only show products from sellers with active tokens
+    // If tokens disabled: show all products from approved active sellers
+    const sellerFilter = tokenRequired
+      ? { isApproved: true, isActive: true, token_expires_at: { $gt: now } }
+      : { isApproved: true, isActive: true };
+    // Products don't carry their own location — they inherit the seller's.
+    // An explicit ?state=&city= filter narrows the seller pool up front;
+    // for sort=nearest we instead keep the full pool and re-rank below so
+    // we can show closest-first with graceful fallback to "everywhere else"
+    // rather than an empty page when nobody's in the exact city/state.
+    if (sort !== 'nearest') {
+      if (state && state !== 'All') sellerFilter.state = state;
+      if (city) sellerFilter.city = { $regex: `^${city}$`, $options: 'i' };
+    }
+const activeSellers = await Seller.find(sellerFilter).select('_id rating store_name username profile_picture category whatsapp contact ninStatus state city');
 
 const activeSellersIds = activeSellers.map(s => s._id);
 const sellerMap = new Map();
-activeSellers.forEach(s => sellerMap.set(s._id.toString(), s));
+activeSellers.forEach(s => {
+sellerMap.set(s._id.toString(), s);
+});
 
 const query = {
 isActive: true,
@@ -363,70 +380,122 @@ const pageNum = parseInt(page);
 
 let products = [];
 
+if (sort === 'nearest') {
+  if (!state) {
+    return res.status(400).json({ success: false, message: 'state is required for sort=nearest' });
+  }
+  // Bucket by proximity: same city first, then same state, then everyone
+  // else — each bucket newest-first. Fetched as a bounded pool (not the
+  // full collection) to keep this cheap even on a large catalog.
+  const POOL_SIZE = 300;
+  const cityIds = city
+    ? new Set(activeSellers.filter(s => s.state === state && s.city?.toLowerCase() === city.toLowerCase()).map(s => s._id.toString()))
+    : new Set();
+  const stateIds = new Set(activeSellers.filter(s => s.state === state && !cityIds.has(s._id.toString())).map(s => s._id.toString()));
+
+  const [cityPool, statePool, elsewherePool] = await Promise.all([
+    cityIds.size ? Product.find({ ...query, seller: { $in: [...cityIds] } }).sort({ createdAt: -1 }).limit(POOL_SIZE).lean() : Promise.resolve([]),
+    stateIds.size ? Product.find({ ...query, seller: { $in: [...stateIds] } }).sort({ createdAt: -1 }).limit(POOL_SIZE).lean() : Promise.resolve([]),
+    Product.find({ ...query, seller: { $nin: [...cityIds, ...stateIds] } }).sort({ createdAt: -1 }).limit(POOL_SIZE).lean(),
+  ]);
+
+  const combined = [...cityPool, ...statePool, ...elsewherePool];
+  const skip = (pageNum - 1) * limitNum;
+  products = combined.slice(skip, skip + limitNum);
+} else
+
 if (sort === 'tiktokScore') {
-// Build the FULL ordered list once, then paginate that single list
-// like normal. This guarantees every product in `query` appears
-// exactly once across all pages (fixes missing products + slow
-// surfacing of new items).
+// Per-page ratios: 40% new, 40% high-rated seller, 20% random
+const newCount = Math.round(limitNum * 0.4);
+const highRatedCount = Math.round(limitNum * 0.4);
+const randomCount = limitNum - newCount - highRatedCount;
+
 const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 const highRatedSellerIds = activeSellers
 .filter(s => (s.rating || 0) >= 4)
 .map(s => s._id);
-const highRatedSet = new Set(highRatedSellerIds.map(id => id.toString()));
 
-const allProducts = await Product.find(query)
+// --- Build three non-overlapping pools, each in a stable order ---
+
+// 1. New products pool
+let newPool = [];
+if (newCount > 0) {
+newPool = await Product.find({ ...query, createdAt: { $gte: oneWeekAgo } })
 .sort({ createdAt: -1, _id: 1 })
 .lean();
-
-const newPool = [];
-const highRatedPool = [];
-const randomPool = [];
-
-for (const p of allProducts) {
-const isNew = p.createdAt && p.createdAt >= oneWeekAgo;
-const isHighRated = highRatedSet.has(p.seller.toString());
-
-if (isNew) newPool.push(p);
-else if (isHighRated) highRatedPool.push(p);
-else randomPool.push(p);
+newPool = deterministicShuffle(newPool, 1);
 }
 
-const shuffledNew = deterministicShuffle(newPool, 1);
-const shuffledHighRated = deterministicShuffle(highRatedPool, 2);
-const shuffledRandom = deterministicShuffle(randomPool, 3);
-
-// Interleave the FULL pools once into a single master ordered list,
-// roughly 40/40/20, backfilling from whichever pool still has items
-// once one runs dry.
-const master = [];
-const pattern = ['new', 'new', 'high', 'high', 'random'];
-let ni = 0, hi = 0, ri = 0, patternIdx = 0;
-const remaining = () =>
-ni < shuffledNew.length || hi < shuffledHighRated.length || ri < shuffledRandom.length;
-
-while (remaining()) {
-const bucket = pattern[patternIdx % pattern.length];
-patternIdx++;
-
-if (bucket === 'new' && ni < shuffledNew.length) {
-master.push(shuffledNew[ni++]);
-} else if (bucket === 'high' && hi < shuffledHighRated.length) {
-master.push(shuffledHighRated[hi++]);
-} else if (bucket === 'random' && ri < shuffledRandom.length) {
-master.push(shuffledRandom[ri++]);
-} else if (ni < shuffledNew.length) {
-master.push(shuffledNew[ni++]);
-} else if (hi < shuffledHighRated.length) {
-master.push(shuffledHighRated[hi++]);
-} else if (ri < shuffledRandom.length) {
-master.push(shuffledRandom[ri++]);
-}
+// 2. High-rated seller products pool (exclude products already in newPool)
+let highRatedPool = [];
+if (highRatedCount > 0 && highRatedSellerIds.length > 0) {
+const newPoolIds = newPool.map(p => p._id);
+highRatedPool = await Product.find({
+...query,
+seller: { $in: highRatedSellerIds },
+_id: { $nin: newPoolIds }
+})
+.sort({ createdAt: -1, _id: 1 })
+.lean();
+highRatedPool = deterministicShuffle(highRatedPool, 2);
 }
 
-const start = (pageNum - 1) * limitNum;
-products = master.slice(start, start + limitNum);
+// 3. Random pool (exclude products already in newPool or highRatedPool)
+let randomPool = [];
+if (randomCount > 0) {
+const excludedIds = [
+...newPool.map(p => p._id),
+...highRatedPool.map(p => p._id)
+];
+randomPool = await Product.find({
+...query,
+_id: { $nin: excludedIds }
+})
+.sort({ _id: 1 })
+.lean();
+randomPool = deterministicShuffle(randomPool, 3);
+}
 
-} else if (sort === 'rating') {
+// --- Slice each pool for this page (no overlap across pages) ---
+const newSkip = (pageNum - 1) * newCount;
+const highRatedSkip = (pageNum - 1) * highRatedCount;
+const randomSkip = (pageNum - 1) * randomCount;
+
+const newSlice = newPool.slice(newSkip, newSkip + newCount);
+const highRatedSlice = highRatedPool.slice(highRatedSkip, highRatedSkip + highRatedCount);
+const randomSlice = randomPool.slice(randomSkip, randomSkip + randomCount);
+
+// --- Interleave in 40/40/20 visual order ---
+let combined = [];
+const maxLen = Math.max(newSlice.length, highRatedSlice.length, randomSlice.length);
+for (let i = 0; i < maxLen; i++) {
+if (newSlice[i]) combined.push(newSlice[i]);
+if (highRatedSlice[i]) combined.push(highRatedSlice[i]);
+if (randomSlice[i]) combined.push(randomSlice[i]);
+}
+
+// --- Backfill if any bucket ran short (e.g. not enough new products) ---
+if (combined.length < limitNum) {
+const usedIds = new Set(combined.map(p => p._id.toString()));
+const remaining = [
+...newPool.slice(newSkip + newCount),
+...highRatedPool.slice(highRatedSkip + highRatedCount),
+...randomPool.slice(randomSkip + randomCount),
+];
+for (const p of remaining) {
+if (combined.length >= limitNum) break;
+const id = p._id.toString();
+if (!usedIds.has(id)) {
+combined.push(p);
+usedIds.add(id);
+}
+}
+}
+
+products = combined.slice(0, limitNum);
+
+} else {
+if (sort === 'rating') {
 products = await Product.aggregate([
 { $match: query },
 {
@@ -452,6 +521,7 @@ products = await Product.find(query)
 .skip((pageNum - 1) * limitNum)
 .limit(limitNum)
 .lean();
+}
 }
 
 // Attach seller data
@@ -527,7 +597,7 @@ router.get('/admin/all', protect, async (req, res) => {
 });
 
 // ─── GET /api/products/:id — public ─────────────────────────────────────────
-router.get('/:id', async (req, res) => {
+router.get('/:id', mongoIdParam('id'), validate, async (req, res) => {
   try {
     const cacheKey = `products:single:${req.params.id}`;
     const cached   =await cache.get(cacheKey);
@@ -595,7 +665,7 @@ router.get('/:id', async (req, res) => {
 //   }
 // });
 
-router.post('/', protect, async (req, res) => {
+router.post('/', protect, writeLimiter, productCreateValidators, validate, async (req, res) => {
   try {
     const data = { ...req.body };
     if (data.expiry_duration_hours && Number(data.expiry_duration_hours) > 0) {
@@ -610,13 +680,14 @@ router.post('/', protect, async (req, res) => {
     if (!(await Seller.findById(data.seller))) return res.status(404).json({ success: false, message: 'Seller not found' });
     const product = new Product(data);
     await product.save();
-    await product.populate('seller','store_name username profile_picture rating whatsapp');
+    await product.populate('seller','store_name username profile_picture rating whatsapp contact ninStatus');
     await cache.delPrefix('products:');
+    await logActivity({ type: 'product_added', seller: data.seller, product: product._id, meta: { via: 'admin' } });
     res.status(201).json({ success: true, product, message: 'Product created' });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.put('/:id', protect, async (req, res) => {
+router.put('/:id', protect, writeLimiter, mongoIdParam('id'), productUpdateValidators, validate, async (req, res) => {
   try {
     const data = { ...req.body };
     if (data.expiry_duration_hours !== undefined) {
@@ -628,19 +699,21 @@ router.put('/:id', protect, async (req, res) => {
       data.images = data.images.filter(Boolean).slice(0, 5);
       data.product_image = data.images[0] || '';
     }
-    const product = await Product.findByIdAndUpdate(req.params.id, data, { new: true, runValidators: true }).populate('seller','store_name username profile_picture rating whatsapp');
+    const product = await Product.findByIdAndUpdate(req.params.id, data, { new: true, runValidators: true }).populate('seller','store_name username profile_picture rating whatsapp contact ninStatus');
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
     await Promise.all([cache.delPrefix('products:'), cache.del(`products:single:${req.params.id}`)]);
+    await logActivity({ type: 'product_updated', seller: product.seller?._id, product: product._id });
     res.json({ success: true, product, message: 'Product updated' });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
 // ─── DELETE /api/products/:id — admin only ───────────────────────────────────
-router.delete('/:id', protect, async (req, res) => {
+router.delete('/:id', protect, writeLimiter, mongoIdParam('id'), validate, async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-   await cache.delPrefix('products:');
+    await cache.delPrefix('products:');
+    await logActivity({ type: 'product_deleted', seller: product.seller, product: product._id });
     res.json({ success: true, message: 'Product deleted' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -648,11 +721,16 @@ router.delete('/:id', protect, async (req, res) => {
 });
 
 // ─── DELETE /api/products/seller/:id — admin seller ───────────────────────────────────
-router.delete('/seller/:id', protectSeller, async (req, res) => {
+router.delete('/seller/:id', protectSeller, writeLimiter, mongoIdParam('id'), validate, async (req, res) => {
   try {
-    const product = await Product.findByIdAndDelete(req.params.id);
-    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-   await cache.delPrefix('products:');
+    // SECURITY: previously this deleted ANY product by ID regardless of
+    // which seller owned it — a seller could delete another seller's
+    // product just by guessing/enumerating IDs. Now scoped to the
+    // authenticated seller's own products only.
+    const product = await Product.findOneAndDelete({ _id: req.params.id, seller: req.seller.id });
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found or not yours' });
+    await cache.delPrefix('products:');
+    await logActivity({ type: 'product_deleted', seller: req.seller.id, product: product._id });
     res.json({ success: true, message: 'Product deleted' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
