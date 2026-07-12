@@ -31,16 +31,16 @@ const app = express();
 // Trust the load balancer / reverse proxy in front of us (Vercel, Netlify,
 // nginx, etc.) so req.ip reflects the real client IP — this matters for
 // rate limiting to be per-client instead of per-proxy.
-app.set('trust proxy', 1);
+//app.set('trust proxy', 1);
 
 // ── Security headers ─────────────────────────────────────────────────────
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow images/API to be fetched cross-origin by the frontend
-}));
+//app.use(helmet({
+ // crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow images/API to be fetched cross-origin by the frontend
+//}));
 
 // ── CORS ──────────────────────────────────────────────────────────────────
 // Restrict to known frontend origins in production; wide open in dev.
-const allowedOrigins = (process.env.CORS_ORIGINS || '')
+/*const allowedOrigins = (process.env.CORS_ORIGINS || '')
   .split(',')
   .map(o => o.trim())
   .filter(Boolean);
@@ -61,7 +61,8 @@ app.use(cors({
 
 if (allowedOrigins.length === 0 && process.env.NODE_ENV === 'production') {
   console.warn('⚠️ CORS_ORIGINS is not set in production — CORS is currently open to all origins. Set CORS_ORIGINS to a comma-separated list of your frontend URL(s).');
-}
+}*/
+app.use(cors())
 
 // ── Compression + logging ───────────────────────────────────────────────
 app.use(compression());
