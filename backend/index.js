@@ -24,7 +24,7 @@ import metaRoutes         from './routes/meta.js';
 import contactRoutes      from './routes/contact.js';
 
 //import { generalLimiter } from './middleware/rateLimiter.js';
-import { sanitizeInput, preventNoSQLInjection } from './middleware/sanitize.js';
+//import { sanitizeInput, preventNoSQLInjection } from './middleware/sanitize.js';
 
 const app = express();
 
