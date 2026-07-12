@@ -1,0 +1,35 @@
+.admin-verification-desc { font-size: 0.85rem; color: var(--ink-muted); max-width: 600px; margin-bottom: 1.5rem; line-height: 1.6; }
+
+.admin-verification-list { display: flex; flex-direction: column; gap: 0.85rem; }
+
+.admin-verification-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+}
+
+.admin-verification-name { font-weight: 700; font-size: 0.95rem; }
+.admin-verification-meta {
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.15rem;
+}
+
+.admin-verification-actions { display: flex; gap: 0.5rem; align-items: center; }
+.admin-verification-actions .spin { animation: admin-verif-spin 0.8s linear infinite; }
+@keyframes admin-verif-spin { to { transform: rotate(360deg); } }
+
+.admin-verification-reject-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.admin-verification-reject-form input { min-width: 220px; }

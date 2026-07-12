@@ -1,29 +1,216 @@
+/* ── Toolbar ──────────────────────────────────────────────────────────── */
+.sp-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1.25rem;
+}
 
+/* ── Pending-approval state ───────────────────────────────────────────── */
+.sp-pending-state { text-align: center; padding: 4rem 1.5rem; }
+.sp-pending-icon { font-size: 3rem; margin-bottom: 1rem; }
+.sp-pending-state h2 { font-family: var(--font-serif); margin-bottom: 0.5rem; }
+.sp-pending-state p { color: var(--ink-muted); font-size: 0.9rem; max-width: 400px; margin: 0 auto; }
 
-.upload-btn-wide {
+/* ── Table (desktop/tablet) vs Card (mobile) toggle ──────────────────── */
+.sp-table-view { display: block; }
+.sp-card-view { display: none; }
+
+.sp-table-desc {
+  font-size: 0.72rem;
+  color: var(--ink-muted);
+  max-width: 220px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 720px) {
+  .sp-table-view { display: none; }
+  .sp-card-view { display: flex; flex-direction: column; gap: 0.85rem; }
+}
+
+/* ── Product cards (mobile) ──────────────────────────────────────────── */
+.sp-product-card {
+  display: flex;
+  gap: 0.85rem;
+  padding: 0.85rem;
+  background: var(--white, #fff);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.sp-product-card-image {
+  width: 68px;
+  height: 68px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--cream);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 1rem;
-  border: 2px dashed var(--border);
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-size: 0.85rem;
-  color: var(--ink-muted);
-  transition: border-color var(--transition);
-  min-height: 70px;
+  font-size: 1.5rem;
 }
-.upload-btn-wide:hover { border-color: var(--gold); color: var(--gold); }
+.sp-product-card-image img { width: 100%; height: 100%; object-fit: cover; }
 
+.sp-product-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.3rem; }
+
+.sp-product-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.sp-product-card-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-product-card-category { font-size: 0.6rem; flex-shrink: 0; }
+
+.sp-product-card-desc {
+  font-size: 0.76rem;
+  color: var(--ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.4;
+}
+
+.sp-product-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+}
+.sp-product-card-price { font-weight: 700; color: var(--gold); font-size: 0.85rem; }
+
+.sp-product-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+.sp-product-card-actions .btn { flex: 1; justify-content: center; font-size: 0.75rem; padding: 0.4rem 0.5rem; }
+
+/* ── Expiry badge ─────────────────────────────────────────────────────── */
 .expiry-tag {
   display: inline-flex; align-items: center; gap: 3px;
   padding: 0.2rem 0.55rem;
   border-radius: 100px;
   font-size: 0.7rem; font-weight: 700;
+  white-space: nowrap;
 }
 .expiry-ok       { background: #d4f5e2; color: #166534; }
 .expiry-warn     { background: #fef3c7; color: #92400e; }
 .expiry-critical { background: #fee2e2; color: #991b1b; }
-.expiry-dead     { background: #f3f4f6; color: #6b7280; font-size: 0.7rem; font-weight: 700; }
+.expiry-dead     { background: #f3f4f6; color: #6b7280; font-size: 0.7rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 100px; }
 .expiry-none     { font-size: 0.75rem; color: var(--ink-muted); font-style: italic; }
+
+/* ── Modal (responsive) ───────────────────────────────────────────────
+   These classes are scoped with an `sp-` prefix specifically because the
+   generic `.modal` / `.modal-overlay` class names this page previously
+   used were never actually defined anywhere in the codebase — the
+   product modal was rendering completely unstyled. Scoping to this file
+   avoids clashing with any other page's modal styling. ────────────────*/
+.sp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 13, 13, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+.sp-modal {
+  background: var(--white, #fff);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+.sp-modal-sm { max-width: 400px; }
+
+.sp-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.4rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sp-modal-header h3 { font-family: var(--font-serif); font-size: 1.05rem; }
+
+.sp-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-muted);
+  padding: 0.35rem;
+  border-radius: 6px;
+  display: flex;
+}
+.sp-modal-close:hover { background: var(--cream); color: var(--ink); }
+
+.sp-modal-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* allow body to scroll within flex parent */
+  overflow: hidden;
+}
+
+.sp-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem 1.4rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.sp-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding: 1rem 1.4rem;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--white, #fff);
+}
+
+.sp-form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* ── Mobile tuning ────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .sp-modal-overlay { padding: 0; align-items: flex-end; }
+  .sp-modal {
+    max-width: 100%;
+    max-height: 92vh;
+    border-radius: 16px 16px 0 0;
+  }
+  .sp-modal-header { padding: 1rem 1.1rem; }
+  .sp-modal-body { padding: 1rem 1.1rem; }
+  .sp-modal-footer { padding: 0.85rem 1.1rem; flex-direction: column-reverse; }
+  .sp-modal-footer .btn { width: 100%; justify-content: center; }
+  .sp-form-grid-2 { grid-template-columns: 1fr; gap: 0.85rem; }
+}
+
+@media (max-width: 480px) {
+  .sp-toolbar .btn { width: 100%; justify-content: center; }
+}

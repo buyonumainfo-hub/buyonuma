@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Star, ExternalLink } from 'lucide-react';
+import { Star, ExternalLink, MapPin, BadgeCheck } from 'lucide-react';
 import { CATEGORY_ICONS } from '../../utils/constants';
 import './SellerCard.css';
 
@@ -43,8 +43,19 @@ const SellerCard = ({ seller }) => {
           <span className="badge badge-gold">{seller.category}</span>
           <Stars rating={seller.rating} />
         </div>
-        <h3 className="seller-card-name">{seller.store_name}</h3>
+        <h3 className="seller-card-name">
+          {seller.store_name}
+          {seller.ninStatus === 'verified' && (
+            <BadgeCheck size={15} className="verified-badge-icon" title="Verified seller" />
+          )}
+        </h3>
         <p className="seller-card-username">@{seller.username}</p>
+        {(seller.city || seller.state) && (
+          <p className="seller-card-username" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <MapPin size={12} />
+            {seller.city ? `${seller.city}, ${seller.state}` : seller.state}
+          </p>
+        )}
         {seller.description && (
           <p className="seller-card-desc">{seller.description}</p>
         )}

@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingBag, Mail, KeyRound, Lock, Eye, EyeOff, CheckCircle, ArrowRight } from 'lucide-react';
-import axios from 'axios';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import './SellerAuth.css';
 import './SellerForgotPassword.css';
-
-const api_url = `${import.meta.env.VITE_API_URL}`
 
 const STEPS = { EMAIL: 'email', CODE: 'code', PASSWORD: 'password', DONE: 'done' };
 
@@ -26,7 +24,7 @@ const SellerForgotPassword = () => {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      await axios.post(`${api_url}/seller-auth/forgot-password`, { email });
+      await api.post('/seller-auth/forgot-password', { email });
       toast.success('Reset code sent!');
       setStep(STEPS.CODE);
     } catch (err) {
@@ -40,7 +38,7 @@ const SellerForgotPassword = () => {
     if (codeStr.length < 5) return setError('Enter the full 5-digit code');
     setLoading(true); setError('');
     try {
-      await axios.post(`${api_url}/seller-auth/verify-reset-code`, { email, code: codeStr });
+      await api.post('/seller-auth/verify-reset-code', { email, code: codeStr });
       setStep(STEPS.PASSWORD);
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid code');
@@ -53,7 +51,7 @@ const SellerForgotPassword = () => {
     if (newPw.length < 6) return setError('Password must be at least 6 characters');
     setLoading(true); setError('');
     try {
-      await axios.post(`${api_url}/seller-auth/reset-password`, { email, code: codeStr, newPassword: newPw });
+      await api.post('/seller-auth/reset-password', { email, code: codeStr, newPassword: newPw });
       toast.success('Password reset successfully!');
       setStep(STEPS.DONE);
     } catch (err) {

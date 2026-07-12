@@ -3,22 +3,21 @@ import { User, Save, Upload } from 'lucide-react';
 import SellerLayout from '../../components/seller/SellerLayout';
 import { useSellerAuth } from '../../context/SellerAuthContext';
 import { uploadToCloudinary } from '../../utils/cloudinary';
-import axios from 'axios';
+import LocationSelect from '../../components/shared/LocationSelect';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import './SellerProfile.css';
-
-const api_url = `${import.meta.env.VITE_API_URL}`
 
 const SellerProfile = () => {
   const { seller, refreshSeller } = useSellerAuth();
   const [form, setForm] = useState({
     store_name: '', description: '', contact: '', whatsapp: '',
-    website: '', social_media_handle: '', profile_picture: '', banner: ''
+    website: '', social_media_handle: '', profile_picture: '', banner: '',
+    state: '', city: ''
   });
   const [uploading, setUploading] = useState({ profile: false, banner: false });
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState('');
-  const token = localStorage.getItem('lens_seller_token');
 
   useEffect(() => {
     if (seller) {
@@ -31,6 +30,8 @@ const SellerProfile = () => {
         social_media_handle: seller.social_media_handle || '',
         profile_picture:     seller.profile_picture || '',
         banner:              seller.banner || '',
+        state:               seller.state || '',
+        city:                seller.city || '',
       });
     }
   }, [seller]);
@@ -54,9 +55,7 @@ const SellerProfile = () => {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      await axios.put(`${api_url}/seller-auth/profile`, form, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.put('/seller-auth/profile', form);
       await refreshSeller();
       toast.success('Profile updated!');
     } catch (err) {
@@ -89,6 +88,8 @@ const SellerProfile = () => {
               <textarea className="form-control" rows={4} placeholder="Tell buyers about your store…"
                 value={form.description} onChange={e => set('description', e.target.value)} />
             </div>
+
+            <LocationSelect state={form.state} city={form.city} onChange={set} />
 
             <div className="grid-2">
               <div className="form-group">

@@ -79,7 +79,11 @@
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
 }
+.verified-badge-icon { color: #1ebe5d; flex-shrink: 0; }
 
 .seller-card-username {
   font-size: 0.78rem;

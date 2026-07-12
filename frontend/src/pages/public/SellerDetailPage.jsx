@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Star, Phone, Globe, Instagram, ArrowLeft, Package, X, ZoomIn } from 'lucide-react';
+import { Star, Phone, Globe, Instagram, ArrowLeft, Package, X, ZoomIn, MapPin, BadgeCheck } from 'lucide-react';
 import Navbar from '../../components/shared/Navbar';
 import Footer from '../../components/shared/Footer';
 import ProductCard from '../../components/public/ProductCard';
 import api from '../../utils/api';
 import { CATEGORY_ICONS } from '../../utils/constants';
+import { trackView } from '../../utils/trackView';
 import './SellerDetailPage.css';
 
 
@@ -70,6 +71,10 @@ const SellerDetailPage = () => {
       .then(res => {
         setSeller(res.data.seller);
         setProducts(res.data.products);
+        // Count this as a store view. Backend already skips counting a
+        // seller viewing their own store (checked via their auth token),
+        // so this is safe to fire unconditionally here.
+        trackView(res.data.seller?._id, 'store_view');
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -155,8 +160,19 @@ const SellerDetailPage = () => {
                 <span className="badge badge-gold">{seller.category}</span>
                 <Stars rating={seller.rating || 0} />
               </div>
-              <h1 className="seller-detail-name">{seller.store_name}</h1>
+              <h1 className="seller-detail-name">
+                {seller.store_name}
+                {seller.ninStatus === 'verified' && (
+                  <BadgeCheck size={20} style={{ color: '#1ebe5d', verticalAlign: 'middle', marginLeft: '0.35rem' }} title="Verified seller" />
+                )}
+              </h1>
               <p className="seller-detail-username">@{seller.username}</p>
+              {(seller.city || seller.state) && (
+                <p className="seller-detail-username" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  <MapPin size={14} />
+                  {seller.city ? `${seller.city}, ${seller.state}` : seller.state}
+                </p>
+              )}
               {seller.description && <p className="seller-detail-desc">{seller.description}</p>}
             </div>
 
@@ -168,7 +184,13 @@ const SellerDetailPage = () => {
                 </a>
               )}
               {seller.whatsapp && (
-                <a href={`https://wa.me/234${seller.whatsapp.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className="contact-item wa-contact">
+                <a
+                  href={`https://wa.me/234${seller.whatsapp.replace(/\D/g,'')}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="contact-item wa-contact"
+                  onClick={() => trackView(seller._id, 'whatsapp_click')}
+                >
                   <WhatsAppIcon />
                   <span>WhatsApp</span>
                 </a>

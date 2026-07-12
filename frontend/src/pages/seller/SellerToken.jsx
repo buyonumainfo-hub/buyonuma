@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react';
 import { Key, CheckCircle, Clock, ArrowRight, AlertTriangle, RefreshCw, Zap } from 'lucide-react';
 import SellerLayout from '../../components/seller/SellerLayout';
 import { useSellerAuth } from '../../context/SellerAuthContext';
-import axios from 'axios';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import './SellerToken.css';
-const api_url = `${import.meta.env.VITE_API_URL}`
 
 const ADMIN_WA = '2348077128030'; // update this to match your .env ADMIN_WHATSAPP
 
@@ -45,13 +44,11 @@ const SellerToken = () => {
   const [result, setResult]         = useState(null);
   const [error, setError]           = useState('');
   const [tokenStatus, setTokenStatus] = useState(null);
-  const authToken = localStorage.getItem('lens_seller_token');
-  const headers   = { Authorization: `Bearer ${authToken}` };
 
   const fetchStatus = async () => {
     setStatusLoading(true);
     try {
-      const res = await axios.get(`${api_url}/seller/token-status`, { headers });
+      const res = await api.get('/seller/token-status');
       setTokenStatus(res.data);
     } catch (err) { console.error(err); }
     finally { setStatusLoading(false); }
@@ -65,7 +62,7 @@ const SellerToken = () => {
     if (!code) return setError('Please enter a token code');
     setLoading(true); setError(''); setResult(null);
     try {
-      const res = await axios.post(`${api_url}/seller/redeem-token`, { token: code }, { headers });
+      const res = await api.post('/seller/redeem-token', { token: code });
       setResult(res.data);
       setTokenInput('');
       toast.success('Token redeemed! Products are now live.');

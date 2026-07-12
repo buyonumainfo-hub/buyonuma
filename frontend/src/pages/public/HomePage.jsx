@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Users, ArrowRight, Star } from 'lucide-react';
+import { ShoppingBag, Users, ArrowRight, Star, MapPin } from 'lucide-react';
 import Navbar from '../../components/shared/Navbar';
 import Footer from '../../components/shared/Footer';
 import SellerCard from '../../components/public/SellerCard';
 import ProductCard from '../../components/public/ProductCard';
 import api from '../../utils/api';
+import { useUserLocation } from '../../hooks/useUserLocation';
 import './HomePage.css';
 
 
@@ -14,6 +15,9 @@ const HomePage = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ sellers: 0, products: 0 });
+  const { location: userLocation, status: geoStatus, detect } = useUserLocation();
+  const [nearbySellers, setNearbySellers] = useState([]);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -36,6 +40,27 @@ const HomePage = () => {
     };
     fetchData();
   }, []);
+
+  // Auto-detect quietly on first Home visit if we don't already have a
+  // cached location — this is what powers "fetch content related to the
+  // location" without requiring the buyer to click anything first. If the
+  // browser has already denied permission previously, this call resolves
+  // immediately to 'denied' and we just skip the section — no repeated
+  // nagging popups.
+  useEffect(() => {
+    if (!userLocation) detect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (geoStatus === 'done' && userLocation?.state) {
+      setNearbyLoading(true);
+      api.get('/sellers', { params: { limit: 4, sort: 'nearest', state: userLocation.state, city: userLocation.city } })
+        .then(res => setNearbySellers(res.data.sellers || []))
+        .catch(() => setNearbySellers([]))
+        .finally(() => setNearbyLoading(false));
+    }
+  }, [geoStatus, userLocation]);
 
   return (
     <>
@@ -97,6 +122,32 @@ const HomePage = () => {
             )}
           </div>
         </section>
+
+        {/* Near You — only shown once we have a detected/known location */}
+        {userLocation?.state && nearbySellers.length > 0 && (
+          <section className="section">
+            <div className="container">
+              <div className="section-header">
+                <div>
+                  <p className="section-eyebrow" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <MapPin size={13} /> Near {userLocation.city ? `${userLocation.city}, ` : ''}{userLocation.state}
+                  </p>
+                  <h2 className="section-title">Sellers Near You</h2>
+                </div>
+                <Link to={`/sellers?state=${encodeURIComponent(userLocation.state)}`} className="btn btn-outline">
+                  View All <ArrowRight size={15} />
+                </Link>
+              </div>
+              {nearbyLoading ? (
+                <div className="spinner" />
+              ) : (
+                <div className="grid-4 fade-up">
+                  {nearbySellers.map(s => <SellerCard key={s._id} seller={s} />)}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Latest Products */}
         <section className="section section-alt">

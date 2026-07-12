@@ -72,3 +72,21 @@
 @media (max-width: 768px) {
   .seller-stats-grid { grid-template-columns: 1fr; }
 }
+
+.dash-monitoring-teaser {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.5rem;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(184,146,58,0.1), rgba(184,146,58,0.03));
+  border: 1px solid rgba(184,146,58,0.3);
+  text-decoration: none;
+  color: var(--ink);
+  margin: 1.5rem 0;
+  transition: all var(--transition);
+}
+.dash-monitoring-teaser:hover { border-color: var(--gold); box-shadow: 0 4px 16px var(--shadow); transform: translateX(4px); }
+.dash-monitoring-teaser svg:first-child { color: var(--gold); flex-shrink: 0; }
+.dash-monitoring-teaser h3 { font-family: var(--font-serif); font-size: 0.95rem; font-weight: 700; margin-bottom: 0.15rem; }
+.dash-monitoring-teaser p { font-size: 0.78rem; color: var(--ink-muted); }

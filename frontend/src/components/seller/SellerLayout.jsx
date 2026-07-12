@@ -1,14 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, Key, User, LogOut, Menu, X, ShoppingBag } from 'lucide-react';
+import { LayoutDashboard, Package, Key, User, LogOut, Menu, X, ShoppingBag, Bell, BadgeCheck, BarChart3 } from 'lucide-react';
 import { useSellerAuth } from '../../context/SellerAuthContext';
+import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import './SellerLayout.css';
 
 const navItems = [
   { to: '/seller/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/seller/products',  icon: Package,         label: 'My Products' },
+  { to: '/seller/monitoring',    icon: BarChart3,   label: 'Monitoring' },
   { to: '/seller/token',     icon: Key,             label: 'Redeem Token' },
+  { to: '/seller/notifications', icon: Bell,        label: 'Notifications', badgeKey: 'unread' },
+  { to: '/seller/verification',  icon: BadgeCheck,  label: 'Verified Badge' },
   { to: '/seller/profile',   icon: User,            label: 'Profile' },
 ];
 
@@ -17,6 +21,20 @@ const SellerLayout = ({ children, title }) => {
   const location = useLocation();
   const navigate  = useNavigate();
   const [open, setOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    // Poll unread notification count periodically so the sidebar badge
+    // stays reasonably fresh without needing a websocket connection.
+    const fetchUnread = () => {
+      api.get('/notifications/seller', { params: { limit: 1 } })
+        .then(res => setUnread(res.data.unreadCount || 0))
+        .catch(() => {});
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -54,11 +72,14 @@ const SellerLayout = ({ children, title }) => {
         )}
 
         <nav className="seller-nav">
-          {navItems.map(({ to, icon: Icon, label }) => (
+          {navItems.map(({ to, icon: Icon, label, badgeKey }) => (
             <Link key={to} to={to}
               className={`seller-nav-item ${location.pathname === to ? 'active' : ''}`}
               onClick={() => setOpen(false)}>
               <Icon size={18} /><span>{label}</span>
+              {badgeKey === 'unread' && unread > 0 && (
+                <span className="seller-nav-badge">{unread > 99 ? '99+' : unread}</span>
+              )}
             </Link>
           ))}
         </nav>

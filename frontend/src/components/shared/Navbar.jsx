@@ -1,11 +1,13 @@
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingBag, Store, Sun, Moon } from 'lucide-react';
+import { ShoppingBag, ShoppingCart, Store, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { useCart } from '../../context/CartContext';
 import './Navbar.css';
 
 const Navbar = () => {
   const loc = useLocation();
   const { theme, toggleTheme } = useTheme();
+  const { totalItems } = useCart();
 
   const desktopLinks = [
     { to:'/home', label:'Home' },
@@ -22,10 +24,11 @@ const Navbar = () => {
         {/* Brand */}
         <Link to="/" className="navbar-brand">
         <img src="/icons/icon-96x96.png" alt="logo" className='logo' />
+        {window.innerWidth >=638 && 
           <span className="brand-text">
-            <span className="brand-buy">Buy</span><span className="brand-uma">OnUma</span>
+            <span className="brand-buy">Buy</span><span className="brand-uma">OnUma </span>
           </span>
-          
+}
         </Link>
 
         {/* Desktop nav links (hidden on mobile — bottom nav takes over) */}
@@ -46,6 +49,10 @@ const Navbar = () => {
             <Store size={14}/> Sell
           </Link>
            <Link to="/seller/login" className="btn btn-outline btn-sm mobile-sell-btn">Seller Login</Link>
+          <Link to="/cart" className="theme-toggle cart-nav-btn" aria-label="View cart">
+            <ShoppingCart size={17} />
+            {totalItems > 0 && <span className="cart-nav-badge">{totalItems > 99 ? '99+' : totalItems}</span>}
+          </Link>
           <button
             className="theme-toggle"
             onClick={toggleTheme}

@@ -1,12 +1,8 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { Clock, Star, X, ExternalLink, ChevronLeft, ChevronRight, ShoppingCart, Check, Phone, BadgeCheck } from 'lucide-react';
+import { Clock, Star, X, ExternalLink , ChevronLeft, ChevronRight} from 'lucide-react';
 import { CATEGORY_ICONS } from '../../utils/constants';
-import { useCart } from '../../context/CartContext';
-import { useViewedProduct } from '../../context/ViewedProductContext';
-import { trackView } from '../../utils/trackView';
-import toast from 'react-hot-toast';
 import './ProductCard.css';
 
 
@@ -28,34 +24,6 @@ export default function ProductModal({ product, onClose }){
     : null;
   const prev = () => setActiveIdx(i => (i === 0 ? images.length - 1 : i - 1));
   const next = () => setActiveIdx(i => (i === images.length - 1 ? 0 : i + 1));
-
-  const { addItem, isInCart } = useCart();
-  const [showContact, setShowContact] = useState(false);
-  const inCart = isInCart(product._id);
-
-  const handleAddToCart = () => {
-    addItem(product, 1);
-    toast.success(`${product.name} added to cart`);
-  };
-
-  const handleWhatsAppClick = () => {
-    const sellerId = product.seller?._id || product.seller;
-    trackView(sellerId, 'whatsapp_click');
-  };
-
-  // Count this as a "product page view" once, when the modal opens —
-  // this is the closest equivalent to a dedicated product page in this
-  // app's modal-based browsing flow. Also make this product available to
-  // the site-wide AI chat widget so it can answer product-specific
-  // questions while this modal is open.
-  const { setViewedProduct } = useViewedProduct() || {};
-  useEffect(() => {
-    const sellerId = product.seller?._id || product.seller;
-    trackView(sellerId, 'product_page_view', product._id);
-    setViewedProduct?.(product);
-    return () => setViewedProduct?.(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product._id]);
 
   // Lock body scroll while modal is open
   useEffect(() => {
@@ -149,9 +117,6 @@ export default function ProductModal({ product, onClose }){
                   <span className="seller-initial">{product.seller.store_name?.[0]}</span>
                 )}
                 <span>{product.seller.store_name}</span>
-                {product.seller.ninStatus === 'verified' && (
-                  <BadgeCheck size={13} className="verified-badge-icon" title="Verified seller" />
-                )}
                 {product.seller.rating > 0 && (
                   <span className="inline-rating">
                     <Star size={10} fill="currentColor" /> {product.seller.rating.toFixed(1)}
@@ -161,41 +126,8 @@ export default function ProductModal({ product, onClose }){
             </>
           )}
 
-          <div className="product-modal-actions">
-            <button
-              className={`btn ${inCart ? 'btn-outline' : 'btn-primary'} product-modal-cart-btn`}
-              onClick={handleAddToCart}
-            >
-              {inCart ? <><Check size={15} /> Added to Cart</> : <><ShoppingCart size={15} /> Add to Cart</>}
-            </button>
-
-            {(product.seller?.contact || product.seller?.whatsapp) && (
-              <button
-                className="btn btn-outline product-modal-cart-btn"
-                onClick={() => setShowContact(true)}
-              >
-                <Phone size={15} /> View Contact
-              </button>
-            )}
-          </div>
-
-          {showContact && (product.seller?.contact || product.seller?.whatsapp) && (
-            <div className="product-contact-reveal">
-              {product.seller.contact && (
-                <a href={`tel:${product.seller.contact}`} className="contact-item">
-                  <Phone size={14} /> <span>{product.seller.contact}</span>
-                </a>
-              )}
-              {product.seller.whatsapp && (
-                <a href={`tel:${product.seller.whatsapp}`} className="contact-item">
-                  <Phone size={14} /> <span>{product.seller.whatsapp}</span>
-                </a>
-              )}
-            </div>
-          )}
-
           {waLink && (
-            <a href={waLink} target="_blank" rel="noreferrer" className="wa-btn" onClick={handleWhatsAppClick}>
+            <a href={waLink} target="_blank" rel="noreferrer" className="wa-btn">
               <WhatsAppIcon />
               Chat on WhatsApp
             </a>

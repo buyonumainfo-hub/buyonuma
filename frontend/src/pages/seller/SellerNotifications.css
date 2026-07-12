@@ -1,0 +1,68 @@
+.seller-notifications-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+.seller-notifications-sub { font-size: 0.85rem; color: var(--ink-muted); max-width: 480px; }
+.seller-notifications-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.seller-notifications-actions .spin { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.seller-notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.seller-notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--white, #fff);
+  cursor: pointer;
+  position: relative;
+}
+.seller-notification-item.unread { background: rgba(184,146,58,0.06); border-color: rgba(184,146,58,0.3); }
+
+.seller-notification-icon {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  background: var(--cream);
+  color: var(--gold);
+}
+.seller-notification-icon.type-approval, .seller-notification-icon.type-success { color: #1ebe5d; background: rgba(30,190,93,0.12); }
+.seller-notification-icon.type-warning { color: #e0453c; background: rgba(224,69,60,0.1); }
+.seller-notification-icon.type-nin { color: #4c8bf5; background: rgba(76,139,245,0.1); }
+
+.seller-notification-body { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; min-width: 0; }
+.seller-notification-title { font-weight: 700; font-size: 0.87rem; }
+.seller-notification-message { font-size: 0.82rem; color: var(--ink-muted); line-height: 1.5; }
+.seller-notification-time { font-size: 0.7rem; color: var(--ink-muted); margin-top: 0.15rem; }
+
+.seller-notification-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  flex-shrink: 0;
+  margin-top: 0.3rem;
+}
+
+.seller-notifications-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}

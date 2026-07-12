@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { Clock, Star, X, ExternalLink } from 'lucide-react';
+import { Clock, Star, X, ExternalLink, Phone, ShoppingCart, Check, BadgeCheck } from 'lucide-react';
 import { CATEGORY_ICONS } from '../../utils/constants';
 import ProductModal from './ProductModal';
 import ProductViewModal from './ProductViewModal';
+import { useCart } from '../../context/CartContext';
+import { trackView } from '../../utils/trackView';
+import toast from 'react-hot-toast';
 import './ProductCard.css';
 
 const WhatsAppIcon = () => (
@@ -15,12 +18,26 @@ const WhatsAppIcon = () => (
 
 const ProductCard = ({ product }) => {
   const [showModal, setShowModal] = useState(false);
+  const [showContact, setShowContact] = useState(false);
   const icon = CATEGORY_ICONS[product.category] || '📦';
   const waNumber = product.seller?.whatsapp?.replace(/\D/g, '');
   const waLink = waNumber
     ? `https://wa.me/234${waNumber}?text=${encodeURIComponent(`Hi, I'm interested in your product: ${product.name} (₦${Number(product.price).toLocaleString()})`)}`
     : null;
  const imageCount = (product.images?.length) || (product.product_image ? 1 : 0);
+  const { addItem, isInCart } = useCart();
+  const inCart = isInCart(product._id);
+
+  const handleAddToCart = (e) => {
+    e.stopPropagation();
+    addItem(product, 1);
+    toast.success(`${product.name} added to cart`);
+  };
+
+  const handleWhatsAppClick = () => {
+    const sellerId = product.seller?._id || product.seller;
+    trackView(sellerId, 'whatsapp_click');
+  };
 
   return (
     <>
@@ -60,6 +77,9 @@ const ProductCard = ({ product }) => {
                   <span className="seller-initial">{product.seller.store_name?.[0]}</span>
                 )}
                 <span>{product.seller.store_name}</span>
+                {product.seller.ninStatus === 'verified' && (
+                  <BadgeCheck size={12} className="verified-badge-icon" title="Verified seller" />
+                )}
                 {product.seller.rating > 0 && (
                   <span className="inline-rating">
                     <Star size={10} fill="currentColor" /> {product.seller.rating.toFixed(1)}
@@ -73,11 +93,34 @@ const ProductCard = ({ product }) => {
             {imageCount > 1 && <span className=" product-card-timeframe view-productbtn">{imageCount} photos</span>}
           
             <ExternalLink size={13} />
+          
             View Product
           </button>
 
+          <div className="product-card-actions">
+            <button className={`btn ${inCart ? 'btn-outline' : 'btn-primary'} product-card-cart-btn`} onClick={handleAddToCart}>
+              {inCart ? <><ShoppingCart size={13} /><Check size={13} /></> : <><ShoppingCart size={13} /></>}
+            </button>
+            {(product.seller?.contact || product.seller?.whatsapp) && (
+              <button className="btn btn-outline product-card-cart-btn" onClick={(e) => { e.stopPropagation(); setShowContact(v => !v); }}>
+                <Phone size={13} />
+              </button>
+            )}
+          </div>
+
+          {showContact && (product.seller?.contact || product.seller?.whatsapp) && (
+            <div className="product-contact-reveal">
+              {/* {product.seller.contact && (
+                <a href={`tel:${product.seller.contact}`} className="contact-item"><Phone size={13} /> <span>{product.seller.contact}</span></a>
+              )} */}
+              {product.seller.whatsapp && (
+                <a href={`tel:${product.seller.whatsapp}`} className="contact-item"><Phone size={13} /> <span>{product.seller.whatsapp}</span></a>
+              )}
+            </div>
+          )}
+
           {waLink && (
-            <a href={waLink} target="_blank" rel="noreferrer" className="wa-btn">
+            <a href={waLink} target="_blank" rel="noreferrer" className="wa-btn" onClick={handleWhatsAppClick}>
               <WhatsAppIcon />
               Chat on WhatsApp
             </a>

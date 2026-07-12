@@ -87,6 +87,25 @@
 }
 .theme-toggle:hover { border-color: var(--gold); color: var(--gold); transform: rotate(15deg); }
 
+/* Cart icon + badge */
+.cart-nav-btn { position: relative; text-decoration: none; }
+.cart-nav-btn:hover { transform: none; }
+.cart-nav-badge {
+  position: absolute;
+  top: -4px; right: -4px;
+  min-width: 17px; height: 17px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--gold, #b8923a);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
 /* Mobile overrides */
 @media (max-width: 768px) {
   .desktop-only { display: none !important; }

@@ -1,0 +1,54 @@
+.seller-mon-refresh {
+  height: 20px;
+  font-size: 0.75rem;
+  color: var(--ink-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+.seller-mon-refresh .spin { animation: seller-mon-spin 0.8s linear infinite; }
+@keyframes seller-mon-spin { to { transform: rotate(360deg); } }
+
+.seller-mon-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.seller-mon-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border-radius: 12px;
+  background: var(--white, #fff);
+  border: 1px solid var(--border);
+}
+.seller-mon-stat-icon {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(184,146,58,0.12);
+  color: var(--gold);
+  flex-shrink: 0;
+}
+.tone-green .seller-mon-stat-icon { background: rgba(30,190,93,0.12); color: #1ebe5d; }
+.tone-orange .seller-mon-stat-icon { background: rgba(240,150,40,0.12); color: #f09628; }
+.tone-blue .seller-mon-stat-icon { background: rgba(76,139,245,0.12); color: #4c8bf5; }
+
+.seller-mon-stat-value { font-size: 1.3rem; font-weight: 800; line-height: 1.1; }
+.seller-mon-stat-label { font-size: 0.7rem; color: var(--ink-muted); margin-top: 0.15rem; }
+
+.seller-mon-chart {
+  padding: 1.25rem;
+  border-radius: 14px;
+  margin-bottom: 1.25rem;
+}
+.seller-mon-chart h3 { font-size: 0.88rem; margin-bottom: 1rem; font-family: var(--font-serif); }
+
+@media (max-width: 480px) {
+  .seller-mon-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .seller-mon-chart { padding: 1rem 0.85rem; }
+}

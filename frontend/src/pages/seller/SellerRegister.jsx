@@ -1,19 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingBag, Eye, EyeOff, Upload } from 'lucide-react';
+import { ShoppingBag, Eye, EyeOff, Upload, MapPin } from 'lucide-react';
 import { useSellerAuth } from '../../context/SellerAuthContext';
 import { uploadToCloudinary } from '../../utils/cloudinary';
 import { CATEGORIES_NO_ALL } from '../../utils/constants';
+import LocationSelect from '../../components/shared/LocationSelect';
+import { useUserLocation } from '../../hooks/useUserLocation';
 import toast from 'react-hot-toast';
 import './SellerAuth.css';
 
 const SellerRegister = () => {
   const { register } = useSellerAuth();
   const navigate = useNavigate();
+  const { location: detectedLocation, status: geoStatus, error: geoError, detect } = useUserLocation();
   const [form, setForm] = useState({
     username: '', email: '', password: '', store_name: '', category: 'Food & Beverages & Cakes',
     description: '', contact: '', whatsapp: '', website: '', social_media_handle: '',
-    profile_picture: '', banner: ''
+    profile_picture: '', banner: '', state: '', city: ''
   });
   const [showPw, setShowPw]       = useState(false);
   const [loading, setLoading]     = useState(false);
@@ -21,6 +24,21 @@ const SellerRegister = () => {
   const [error, setError]         = useState('');
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleUseMyLocation = () => {
+    detect();
+  };
+
+  // Once detection finishes, fill the form (only if the seller hasn't
+  // already typed something — don't clobber a manual entry mid-detect).
+  useEffect(() => {
+    if (geoStatus === 'done' && detectedLocation && !form.state) {
+      set('state', detectedLocation.state);
+      if (detectedLocation.city) set('city', detectedLocation.city);
+      toast.success(`Location detected: ${detectedLocation.city ? detectedLocation.city + ', ' : ''}${detectedLocation.state}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geoStatus, detectedLocation]);
 
   const handleImage = async (e, field) => {
     const file = e.target.files[0];
@@ -96,6 +114,27 @@ const SellerRegister = () => {
               </button>
             </div>
           </div>
+
+          <div className="form-section-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+            <span>Location</span>
+            <button
+              type="button"
+              onClick={handleUseMyLocation}
+              disabled={geoStatus === 'locating'}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '0.3rem',
+                fontSize: '0.72rem', background: 'none', border: '1px solid var(--gold, #b8923a)',
+                borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', color: 'var(--gold, #b8923a)',
+              }}
+            >
+              <MapPin size={13} />
+              {geoStatus === 'locating' ? 'Detecting…' : 'Use my current location'}
+            </button>
+          </div>
+          {geoStatus === 'denied' || geoStatus === 'error' ? (
+            <p style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', marginTop: '-0.5rem' }}>{geoError}</p>
+          ) : null}
+          <LocationSelect state={form.state} city={form.city} onChange={set} />
 
           <div className="form-section-label">Store Info</div>
           <div className="grid-2">

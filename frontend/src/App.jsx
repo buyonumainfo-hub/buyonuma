@@ -2,9 +2,12 @@ import {ScrollRestoration, BrowserRouter, Routes, Route, Navigate, useLocation }
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SellerAuthProvider, useSellerAuth } from './context/SellerAuthContext';
+import { CartProvider } from './context/CartContext';
+import { ViewedProductProvider } from './context/ViewedProductContext';
 import PWAInstallPrompt from './components/shared/InstallPrompt';
 import { ThemeProvider } from './context/ThemeContext';
 import BottomNav from './components/shared/BottomNav';
+import AIChatWidget from './components/shared/AIChatWidget';
 
 // Public pages
 import HomePage           from './pages/public/HomePage';
@@ -15,6 +18,10 @@ import AboutPage          from './pages/public/AboutPage';
 import ContactPage        from './pages/public/ContactPage';
 import BecomeSellerPage   from './pages/public/BecomeSellerPage';
 import ContactDeveloper   from './pages/public/ContactDeveloper';
+import CartPage           from './pages/public/CartPage';
+import TermsPage          from './pages/public/TermsPage';
+import PrivacyPage        from './pages/public/PrivacyPage';
+import DocsPage           from './pages/public/DocsPage';
 import ScrollToTop from './components/shared/ScrollToTop'
 
 // Admin pages
@@ -23,6 +30,9 @@ import AdminDashboard  from './pages/admin/AdminDashboard';
 import AdminSellers    from './pages/admin/AdminSellers';
 import AdminProducts   from './pages/admin/AdminProducts';
 import AdminSettings   from './pages/admin/AdminSettings';
+import AdminMonitoring from './pages/admin/AdminMonitoring';
+import AdminBroadcast  from './pages/admin/AdminBroadcast';
+import AdminVerification from './pages/admin/AdminVerification';
 
 // Seller pages
 import SellerLogin          from './pages/seller/SellerLogin';
@@ -32,6 +42,9 @@ import SellerDashboard      from './pages/seller/SellerDashboard';
 import SellerProducts       from './pages/seller/SellerProducts';
 import SellerToken          from './pages/seller/SellerToken';
 import SellerProfile        from './pages/seller/SellerProfile';
+import SellerNotifications  from './pages/seller/SellerNotifications';
+import SellerVerification   from './pages/seller/SellerVerification';
+import SellerMonitoring     from './pages/seller/SellerMonitoring';
 
 const Spinner = () => (
   <div style={{ display:'flex', justifyContent:'center', alignItems:'center', height:'100vh' }}>
@@ -71,6 +84,8 @@ function App() {
      <ThemeProvider>
     <AuthProvider>
       <SellerAuthProvider>
+        <CartProvider>
+        <ViewedProductProvider>
         <BrowserRouter>
         <ScrollToTop/>
           <Toaster position="top-right" toastOptions={toastOpts} />
@@ -78,16 +93,22 @@ function App() {
           <PWAInstallPrompt />
             {/* App-style bottom nav — mobile only */}
           <BottomNav />
+          {/* Site-wide AI shopping assistant */}
+          <AIChatWidget />
           <Routes>
             {/* ── Public ── */}
             <Route path="/home"                   element={<HomePage />} />
             <Route path="/sellers"            element={<SellersPage />} />
-            <Route path="/:id"        element={<SellerDetailPage />} />
-            <Route path="/"           element={<ProductsPage />} />
+            <Route path="/cart"               element={<CartPage />} />
+            <Route path="/terms"              element={<TermsPage />} />
+            <Route path="/privacy"            element={<PrivacyPage />} />
+            <Route path="/docs"               element={<DocsPage />} />
             <Route path="/about"              element={<AboutPage />} />
             <Route path="/contact"            element={<ContactPage />} />
             <Route path="/become-a-seller"    element={<BecomeSellerPage />} />
             <Route path="/developer"          element={<ContactDeveloper />} />
+            <Route path="/:id"        element={<SellerDetailPage />} />
+            <Route path="/"           element={<ProductsPage />} />
 
             {/* ── Admin ── */}
             <Route path="/admin/login"    element={<AdminPublic><AdminLogin /></AdminPublic>} />
@@ -95,6 +116,9 @@ function App() {
             <Route path="/admin/sellers"  element={<AdminProtected><AdminSellers /></AdminProtected>} />
             <Route path="/admin/products" element={<AdminProtected><AdminProducts /></AdminProtected>} />
             <Route path="/admin/settings" element={<AdminProtected><AdminSettings /></AdminProtected>} />
+            <Route path="/admin/monitoring"   element={<AdminProtected><AdminMonitoring /></AdminProtected>} />
+            <Route path="/admin/broadcast"    element={<AdminProtected><AdminBroadcast /></AdminProtected>} />
+            <Route path="/admin/verification" element={<AdminProtected><AdminVerification /></AdminProtected>} />
 
             {/* ── Seller ── */}
             <Route path="/seller/login"           element={<SellerPublic><SellerLogin /></SellerPublic>} />
@@ -104,10 +128,15 @@ function App() {
             <Route path="/seller/products"        element={<SellerProtected><SellerProducts /></SellerProtected>} />
             <Route path="/seller/token"           element={<SellerProtected><SellerToken /></SellerProtected>} />
             <Route path="/seller/profile"         element={<SellerProtected><SellerProfile /></SellerProtected>} />
+            <Route path="/seller/notifications"   element={<SellerProtected><SellerNotifications /></SellerProtected>} />
+            <Route path="/seller/verification"    element={<SellerProtected><SellerVerification /></SellerProtected>} />
+            <Route path="/seller/monitoring"      element={<SellerProtected><SellerMonitoring /></SellerProtected>} />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
+        </ViewedProductProvider>
+        </CartProvider>
       </SellerAuthProvider>
     </AuthProvider>
     </ThemeProvider>

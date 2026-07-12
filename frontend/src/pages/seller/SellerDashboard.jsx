@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Key, Clock, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
+import { Package, Key, Clock, ArrowRight, AlertCircle, CheckCircle, BarChart3 } from 'lucide-react';
 import SellerLayout from '../../components/seller/SellerLayout';
 import { useSellerAuth } from '../../context/SellerAuthContext';
-import axios from 'axios';
+import api from '../../utils/api';
 import './SellerDashboard.css';
 
-const api_url = `${import.meta.env.VITE_API_URL}`
 const ADMIN_WA = '2348077128030';
 
 const SellerDashboard = () => {
@@ -14,14 +13,11 @@ const SellerDashboard = () => {
   const [stats, setStats]   = useState({ total: 0, active: 0 });
   const [tokenStatus, setTokenStatus] = useState(null);
   const [loading, setLoading] = useState(true);
-
+ //console.log(tokenStatus)
   useEffect(() => {
-    const token = localStorage.getItem('lens_seller_token');
-    const h = { Authorization: `Bearer ${token}` };
-
     Promise.all([
-      axios.get(`${api_url}/seller/products`, { headers: h }),
-      axios.get(`${api_url}/seller/token-status`, { headers: h })
+      api.get('/seller/products'),
+      api.get('/seller/token-status')
     ]).then(([pRes, tRes]) => {
       const products = pRes.data.products || [];
       const now = new Date();
@@ -56,6 +52,7 @@ const SellerDashboard = () => {
               <strong>Awaiting Admin Approval</strong>
               <p>Your account is under review. You can set up your store but cannot post products until approved.</p>
               <p>Message Admin on whatsapp to approve your account.</p>
+              <p>text on whatsapp {ADMIN_WA}</p>
                <a
             href={`https://wa.me/${ADMIN_WA}?text=${encodeURIComponent(`Hi! I just registered on BuyOnUma. Please approve my seller account.\nStore: ${seller?.store_name} (@${seller?.username})`)}`}
             className="btn btn-wa btn-lg"
@@ -86,11 +83,13 @@ const SellerDashboard = () => {
           <div className="seller-stat-card">
             <div className="seller-stat-icon active"><Package size={22} /></div>
             <div>
-              <p className="seller-stat-num">{loading ? '—' : stats.active}</p>
+              <p className="seller-stat-num">{loading ? '—' : stats.total}</p>
               <p className="seller-stat-label">Active / Visible</p>
             </div>
           </div>
-          <div className="seller-stat-card">
+          {
+            tokenStatus?.token_required && (
+                 <div className="seller-stat-card">
             <div className="seller-stat-icon token"><Key size={22} /></div>
             <div>
               <p className="seller-stat-num" style={{ fontSize: '1rem' }}>
@@ -101,10 +100,13 @@ const SellerDashboard = () => {
               <p className="seller-stat-label">Token Status</p>
             </div>
           </div>
+            )
+          }
+       
         </div>
 
         {/* Token banner */}
-        {!loading && !tokenStatus?.has_active_token && seller?.isApproved && (
+        {!loading && !tokenStatus?.has_active_token && seller?.isApproved && tokenStatus?.token_required && (
           <div className="dash-token-banner" >
             <Key size={20} />
             <div>
@@ -116,6 +118,16 @@ const SellerDashboard = () => {
             </Link>
           </div>
         )}
+
+        {/* Analytics teaser — full charts live on the Monitoring page */}
+        <Link to="/seller/monitoring" className="dash-monitoring-teaser">
+          <BarChart3 size={22} />
+          <div>
+            <h3>Store Analytics</h3>
+            <p>See your views, WhatsApp clicks, and top products with charts</p>
+          </div>
+          <ArrowRight size={16} className="quick-link-arrow" />
+        </Link>
 
         {/* Quick links */}
         <div className="dash-quick-links">

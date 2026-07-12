@@ -30,6 +30,12 @@ const Footer = () => (
           <Link to="/seller/login">Seller Login</Link>
           <Link to="/seller/register">Seller Register</Link>
         </div>
+        <div>
+          <h4>Legal</h4>
+          <Link to="/terms">Terms of Service</Link>
+          <Link to="/privacy">Privacy Policy</Link>
+          <Link to="/docs">Documentation</Link>
+        </div>
       </div>
     </div>
     <div className="footer-bottom">
