@@ -102,6 +102,10 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
+        // Adds push notification display + click handling to the
+        // generated service worker (Workbox's generateSW doesn't include
+        // this by default — see public/sw-push.js).
+        importScripts: ['sw-push.js'],
       },
       devOptions: {
         enabled: true,       // enable PWA in dev mode for testing
