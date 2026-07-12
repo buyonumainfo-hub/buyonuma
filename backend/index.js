@@ -8,7 +8,7 @@ import compression from 'compression';
 import morgan from 'morgan';
 import hpp from 'hpp';
 
-import authRoutes         from './routes/auth.js';
+//import authRoutes         from './routes/auth.js';
 import sellerAuthRoutes   from './routes/sellerAuth.js';
 import sellerRoutes       from './routes/sellers.js';
 import productRoutes      from './routes/products.js';
@@ -84,7 +84,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api/', generalLimiter);
 
 // ── Routes ────────────────────────────────────────────────────────────────
-app.use('/api/auth',          authRoutes);
+//app.use('/api/auth',          authRoutes);
 app.use('/api/seller-auth',   sellerAuthRoutes);
 app.use('/api/sellers',       sellerRoutes);
 app.use('/api/products',      productRoutes);
