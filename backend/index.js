@@ -132,7 +132,7 @@ mongoose.connect(process.env.MONGODB_URI)
       console.log(`🚀 Server running on port ${process.env.PORT || 5000}`)
     );
   })
-  .catch(err => { console.error('❌ MongoDB error:', err); process.exit(1); });
+  .catch(err => { console.error('❌ MongoDB error:', err); });
 
 // Surface otherwise-silent crashes instead of the process dying with no trace —
 // important on a long-running instance (not needed per-invocation on Vercel,
