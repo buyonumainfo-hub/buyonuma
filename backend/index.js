@@ -23,8 +23,8 @@ import monitoringRoutes   from './routes/monitoring.js';
 import metaRoutes         from './routes/meta.js';
 import contactRoutes      from './routes/contact.js';
 */
-import { generalLimiter } from './middleware/rateLimiter.js';
-import { sanitizeInput, preventNoSQLInjection } from './middleware/sanitize.js';
+//import { generalLimiter } from './middleware/rateLimiter.js';
+//import { sanitizeInput, preventNoSQLInjection } from './middleware/sanitize.js';
 
 const app = express();
 
@@ -81,7 +81,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 //app.use(hpp());
 
 // ── General rate limiting (per-route limiters layer on top of this) ─────
-app.use('/api/', generalLimiter);
+//app.use('/api/', generalLimiter);
 
 // ── Routes ────────────────────────────────────────────────────────────────
 //app.use('/api/auth',          authRoutes);
@@ -137,8 +137,8 @@ mongoose.connect(process.env.MONGODB_URI)
 // Surface otherwise-silent crashes instead of the process dying with no trace —
 // important on a long-running instance (not needed per-invocation on Vercel,
 // but harmless there either).
-process.on('unhandledRejection', (reason) => {
+/*process.on('unhandledRejection', (reason) => {
   console.error('Unhandled Promise Rejection:', reason);
-});
+});*/
 
 export default app;
