@@ -23,7 +23,7 @@ import monitoringRoutes   from './routes/monitoring.js';
 import metaRoutes         from './routes/meta.js';
 import contactRoutes      from './routes/contact.js';
 
-//import { generalLimiter } from './middleware/rateLimiter.js';
+import { generalLimiter } from './middleware/rateLimiter.js';
 //import { sanitizeInput, preventNoSQLInjection } from './middleware/sanitize.js';
 
 const app = express();
@@ -31,16 +31,16 @@ const app = express();
 // Trust the load balancer / reverse proxy in front of us (Vercel, Netlify,
 // nginx, etc.) so req.ip reflects the real client IP — this matters for
 // rate limiting to be per-client instead of per-proxy.
-//app.set('trust proxy', 1);
+app.set('trust proxy', 1);
 
 // ── Security headers ─────────────────────────────────────────────────────
-//app.use(helmet({
- // crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow images/API to be fetched cross-origin by the frontend
-//}));
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }, // allow images/API to be fetched cross-origin by the frontend
+}));
 
 // ── CORS ──────────────────────────────────────────────────────────────────
 // Restrict to known frontend origins in production; wide open in dev.
-/*const allowedOrigins = (process.env.CORS_ORIGINS || '')
+const allowedOrigins = (process.env.CORS_ORIGINS || '')
   .split(',')
   .map(o => o.trim())
   .filter(Boolean);
@@ -61,12 +61,12 @@ app.use(cors({
 
 if (allowedOrigins.length === 0 && process.env.NODE_ENV === 'production') {
   console.warn('⚠️ CORS_ORIGINS is not set in production — CORS is currently open to all origins. Set CORS_ORIGINS to a comma-separated list of your frontend URL(s).');
-}*/
-app.use(cors())
+}
+//app.use(cors())
 
 // ── Compression + logging ───────────────────────────────────────────────
-//app.use(compression());
-//app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+app.use(compression());
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // ── Body parsing ─────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
@@ -78,10 +78,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // (?category=A&category=B tricks on array-unaware handlers).
 //app.use(sanitizeInput);
 //app.use(preventNoSQLInjection);
-//app.use(hpp());
+app.use(hpp());
 
 // ── General rate limiting (per-route limiters layer on top of this) ─────
-//app.use('/api/', generalLimiter);
+app.use('/api/', generalLimiter);
 
 // ── Routes ────────────────────────────────────────────────────────────────
 app.use('/api/auth',          authRoutes);
@@ -114,16 +114,16 @@ app.use((req, res) => {
 // ── Global error handler ────────────────────────────────────────────────
 // Catches anything that slips past individual route try/catch blocks
 // (e.g. malformed JSON body) so the process never crashes on a bad request.
-// app.use((err, req, res, next) => {
-//   if (err.message === 'Not allowed by CORS') {
-//     return res.status(403).json({ success: false, message: 'Origin not allowed' });
-//   }
-//   if (err.type === 'entity.parse.failed') {
-//     return res.status(400).json({ success: false, message: 'Invalid JSON in request body' });
-//   }
-//   console.error('Unhandled error:', err);
-//   res.status(500).json({ success: false, message: 'Something went wrong. Please try again.' });
-// });
+app.use((err, req, res, next) => {
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({ success: false, message: 'Origin not allowed' });
+  }
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ success: false, message: 'Invalid JSON in request body' });
+  }
+  console.error('Unhandled error:', err);
+  res.status(500).json({ success: false, message: 'Something went wrong. Please try again.' });
+});
 
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
@@ -137,8 +137,8 @@ mongoose.connect(process.env.MONGODB_URI)
 // Surface otherwise-silent crashes instead of the process dying with no trace —
 // important on a long-running instance (not needed per-invocation on Vercel,
 // but harmless there either).
-/*process.on('unhandledRejection', (reason) => {
+process.on('unhandledRejection', (reason) => {
   console.error('Unhandled Promise Rejection:', reason);
-});*/
+});
 
 export default app;
