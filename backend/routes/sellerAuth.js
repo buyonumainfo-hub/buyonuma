@@ -86,10 +86,16 @@ router.post('/login', authLimiter, sellerLoginValidators, validate, async (req, 
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
+    // 30-day session — sellers stay logged in across visits/devices/other
+    // sites without needing to re-enter credentials, until this expires
+    // or they explicitly log out. The token itself lives in localStorage
+    // on the frontend, which already persists across browser sessions and
+    // isn't affected by navigating to other websites — only this expiry
+    // window, an explicit logout, or clearing browser data ends the session.
     const token = jwt.sign(
       { id: seller._id, username: seller.username, store_name: seller.store_name, role: 'seller' },
       JWT_SECRET_GETTER(),
-      { expiresIn: '7d' }
+      { expiresIn: '30d' }
     );
 
     const hasActiveToken = seller.token_expires_at && new Date(seller.token_expires_at) > new Date();

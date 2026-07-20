@@ -50,7 +50,7 @@ export const sellerRegisterValidators = [
   body('nin').optional().isLength({ min: 11, max: 11 }).withMessage('NIN must be exactly 11 digits').isNumeric(),
   body('state').trim().notEmpty().withMessage('State is required')
     .isIn(NIGERIA_STATES).withMessage('Please select a valid Nigerian state'),
-  body('city').trim().notEmpty().withMessage('City/town is required')
+  body('city').optional()
     .isLength({ min: 2, max: 80 }).withMessage('City/town must be 2-80 characters'),
 ];
 

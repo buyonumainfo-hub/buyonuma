@@ -24,7 +24,7 @@ import metaRoutes         from './routes/meta.js';
 import contactRoutes      from './routes/contact.js';
 
 import { generalLimiter } from './middleware/rateLimiter.js';
-//import { sanitizeInput, preventNoSQLInjection } from './middleware/sanitize.js';
+import { sanitizeInput, preventNoSQLInjection } from './middleware/sanitize.js';
 
 const app = express();
 
@@ -76,8 +76,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Order matters: sanitize HTML/XSS first, then strip Mongo operator
 // injection, then hpp guards against HTTP parameter pollution
 // (?category=A&category=B tricks on array-unaware handlers).
-//app.use(sanitizeInput);
-//app.use(preventNoSQLInjection);
+app.use(sanitizeInput);
+app.use(preventNoSQLInjection);
 app.use(hpp());
 
 // ── General rate limiting (per-route limiters layer on top of this) ─────

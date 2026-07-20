@@ -306,13 +306,13 @@ const activateAll = async () => {
 
 // new
 
-router.get('/', locationQuery, validate, async (req, res) => {
+router.get('/', async (req, res) => {
 try {
    const tokenRequired = await isTokenRequired();
    if (tokenRequired) {
     await cleanExpired();
    }else{
-       await activateAll();
+     await activateAll();
    }
 
 
@@ -342,10 +342,10 @@ const now = new Date();
     // for sort=nearest we instead keep the full pool and re-rank below so
     // we can show closest-first with graceful fallback to "everywhere else"
     // rather than an empty page when nobody's in the exact city/state.
-    if (sort !== 'nearest') {
-      if (state && state !== 'All') sellerFilter.state = state;
-      if (city) sellerFilter.city = { $regex: `^${city}$`, $options: 'i' };
-    }
+   if (sort !== 'nearest') {
+  if (state && state !== 'All') sellerFilter.state = { $regex: `^${state}$`, $options: 'i' };
+  if (city) sellerFilter.city = { $regex: `^${city}$`, $options: 'i' };
+}
 const activeSellers = await Seller.find(sellerFilter).select('_id rating store_name username profile_picture category whatsapp contact ninStatus state city');
 
 const activeSellersIds = activeSellers.map(s => s._id);
@@ -379,32 +379,45 @@ const limitNum = parseInt(limit);
 const pageNum = parseInt(page);
 
 let products = [];
-
 if (sort === 'nearest') {
   if (!state) {
     return res.status(400).json({ success: false, message: 'state is required for sort=nearest' });
   }
-  // Bucket by proximity: same city first, then same state, then everyone
-  // else — each bucket newest-first. Fetched as a bounded pool (not the
-  // full collection) to keep this cheap even on a large catalog.
-  const POOL_SIZE = 300;
-  const cityIds = city
-    ? new Set(activeSellers.filter(s => s.state === state && s.city?.toLowerCase() === city.toLowerCase()).map(s => s._id.toString()))
-    : new Set();
-  const stateIds = new Set(activeSellers.filter(s => s.state === state && !cityIds.has(s._id.toString())).map(s => s._id.toString()));
 
+  const stateRegex = { $regex: `^${state}$`, $options: 'i' };
+
+  const citySellerQuery = city
+    ? { ...sellerFilter, state: stateRegex, city: { $regex: `^${city}$`, $options: 'i' } }
+    : null;
+  const stateSellerQuery = { ...sellerFilter, state: stateRegex };
+
+  const [citySellers, stateSellersRaw] = await Promise.all([
+    citySellerQuery ? Seller.find(citySellerQuery).select('_id').lean() : Promise.resolve([]),
+    Seller.find(stateSellerQuery).select('_id').lean(),
+  ]);
+
+  const cityIds = new Set(citySellers.map((s) => s._id.toString()));
+  const stateOnlyIds = new Set(
+    stateSellersRaw.map((s) => s._id.toString()).filter((id) => !cityIds.has(id))
+  );
+
+  const POOL_SIZE = 300;
   const [cityPool, statePool, elsewherePool] = await Promise.all([
-    cityIds.size ? Product.find({ ...query, seller: { $in: [...cityIds] } }).sort({ createdAt: -1 }).limit(POOL_SIZE).lean() : Promise.resolve([]),
-    stateIds.size ? Product.find({ ...query, seller: { $in: [...stateIds] } }).sort({ createdAt: -1 }).limit(POOL_SIZE).lean() : Promise.resolve([]),
-    Product.find({ ...query, seller: { $nin: [...cityIds, ...stateIds] } }).sort({ createdAt: -1 }).limit(POOL_SIZE).lean(),
+    cityIds.size
+      ? Product.find({ ...query, seller: { $in: [...cityIds] } }).sort({ createdAt: -1 }).limit(POOL_SIZE).lean()
+      : Promise.resolve([]),
+    stateOnlyIds.size
+      ? Product.find({ ...query, seller: { $in: [...stateOnlyIds] } }).sort({ createdAt: -1 }).limit(POOL_SIZE).lean()
+      : Promise.resolve([]),
+    (cityIds.size || stateOnlyIds.size)
+      ? Product.find({ ...query, seller: { $nin: [...cityIds, ...stateOnlyIds] } }).sort({ createdAt: -1 }).limit(POOL_SIZE).lean()
+      : Product.find(query).sort({ createdAt: -1 }).limit(POOL_SIZE).lean(),
   ]);
 
   const combined = [...cityPool, ...statePool, ...elsewherePool];
   const skip = (pageNum - 1) * limitNum;
   products = combined.slice(skip, skip + limitNum);
-} else
-
-if (sort === 'tiktokScore') {
+} else if (sort === 'tiktokScore') {
 // Per-page ratios: 40% new, 40% high-rated seller, 20% random
 const newCount = Math.round(limitNum * 0.4);
 const highRatedCount = Math.round(limitNum * 0.4);
