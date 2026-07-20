@@ -99,11 +99,11 @@ const ProductCard = ({ product }) => {
 
           <div className="product-card-actions">
             <button className={`btn ${inCart ? 'btn-outline' : 'btn-primary'} product-card-cart-btn`} onClick={handleAddToCart}>
-              {inCart ? <><Check size={13} /> In Cart</> : <><ShoppingCart size={13} /> Add to Cart</>}
+              {inCart ? <><ShoppingCart size={13} /><Check size={13} /> </> : <><ShoppingCart size={13} /></>}
             </button>
             {(product.seller?.contact || product.seller?.whatsapp) && (
               <button className="btn btn-outline product-card-cart-btn" onClick={(e) => { e.stopPropagation(); setShowContact(v => !v); }}>
-                <Phone size={13} /> Contact
+                <Phone size={13} />
               </button>
             )}
           </div>

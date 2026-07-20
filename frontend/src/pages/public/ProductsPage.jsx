@@ -197,7 +197,25 @@ return (
 )}
 </div>
 </div>
-<p style={{fontSize: "12px"}}>Scroll for categories ➡️</p><br />
+<div
+  style={{
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    fontSize: "12px",
+    fontWeight: 500,
+    color: "#e0e7f7",
+   
+    padding: "4px 10px",
+    borderRadius: "999px",
+    animation: "fadeInHint 0.6s ease-out, pulseHint 2s ease-in-out infinite 0.6s",
+  }}
+>
+  Scroll for more categories
+  <span style={{ display: "inline-block", animation: "nudgeArrow 1.2s ease-in-out infinite" }}>
+    ➡️
+  </span>
+</div>
  <div className="category-scroll">
           {CATEGORIES.map(cat => (
             <button key={cat}
@@ -242,6 +260,22 @@ return (
 {!hasMoreRef.current && products.length>0 && !loadingMore && <p className="end-of-results">— You've seen all {total} products —</p>}
 </div>
 
+
+
+<style>{`
+  @keyframes fadeInHint {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulseHint {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+  @keyframes nudgeArrow {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(4px); }
+  }
+`}</style>
 </>
 );
 }
