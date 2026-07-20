@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Key, CheckCircle, Clock, ArrowRight, AlertTriangle, RefreshCw, Zap } from 'lucide-react';
 import SellerLayout from '../../components/seller/SellerLayout';
+import LoadFailedModal from '../../components/seller/LoadFailedModal';
 import { useSellerAuth } from '../../context/SellerAuthContext';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
@@ -44,17 +45,25 @@ const SellerToken = () => {
   const [result, setResult]         = useState(null);
   const [error, setError]           = useState('');
   const [tokenStatus, setTokenStatus] = useState(null);
+  const [loadError, setLoadError] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   const fetchStatus = async () => {
     setStatusLoading(true);
+    setLoadError(false);
     try {
       const res = await api.get('/seller/token-status');
       setTokenStatus(res.data);
-    } catch (err) { console.error(err); }
-    finally { setStatusLoading(false); }
+    } catch (err) {
+      console.error(err);
+      setLoadError(true);
+    }
+    finally { setStatusLoading(false); setRetrying(false); }
   };
 
   useEffect(() => { fetchStatus(); }, []);
+
+  const handleRetry = () => { setRetrying(true); fetchStatus(); };
 
   const handleRedeem = async (e) => {
     e.preventDefault();
@@ -78,6 +87,14 @@ const SellerToken = () => {
   const waMsg = encodeURIComponent(
     `Hi! I need a new listing token for my seller account.\nStore: ${seller?.store_name} (@${seller?.username})`
   );
+
+  if (loadError && !statusLoading) {
+    return (
+      <SellerLayout title="Redeem Token">
+        <LoadFailedModal onRetry={handleRetry} retrying={retrying} message="We couldn't load your token status. Please check your connection and try again." />
+      </SellerLayout>
+    );
+  }
 
     // Token system disabled — products show freely
     if (tokenStatus && !tokenStatus.token_required){

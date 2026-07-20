@@ -151,7 +151,7 @@
 }
 .wa-btn:hover { background: #1ebe5d; transform: translateY(-1px); }
 
-.verified-badge-icon { color: #1ebe5d; flex-shrink: 0; }
+.verified-badge-icon { color: blue; flex-shrink: 0; }
 
 .product-modal-actions {
   display: flex;

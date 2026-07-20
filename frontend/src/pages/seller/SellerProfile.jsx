@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { User, Save, Upload } from 'lucide-react';
 import SellerLayout from '../../components/seller/SellerLayout';
+import LoadFailedModal from '../../components/seller/LoadFailedModal';
 import { useSellerAuth } from '../../context/SellerAuthContext';
 import { uploadToCloudinary } from '../../utils/cloudinary';
 import LocationSelect from '../../components/shared/LocationSelect';
@@ -19,21 +20,54 @@ const SellerProfile = () => {
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState('');
 
-  useEffect(() => {
-    if (seller) {
-      setForm({
-        store_name:          seller.store_name || '',
-        description:         seller.description || '',
-        contact:             seller.contact || '',
-        whatsapp:            seller.whatsapp || '',
-        website:             seller.website || '',
-        social_media_handle: seller.social_media_handle || '',
-        profile_picture:     seller.profile_picture || '',
-        banner:              seller.banner || '',
-        state:               seller.state || '',
-        city:                seller.city || '',
-      });
+  // This page's own fresh load, independent of the app-wide auth check
+  // that already ran before this page could even mount. Gives Profile
+  // its own retry option if refreshing the seller's data specifically
+  // fails here (network blip, backend hiccup) — matching the same
+  // load-failed → retry pattern used on every other seller dashboard page.
+  const [pageLoading, setPageLoading] = useState(true);
+  const [loadError, setLoadError]     = useState(false);
+  const [retrying, setRetrying]       = useState(false);
+
+  const populateForm = (s) => {
+    setForm({
+      store_name:          s.store_name || '',
+      description:         s.description || '',
+      contact:             s.contact || '',
+      whatsapp:            s.whatsapp || '',
+      website:             s.website || '',
+      social_media_handle: s.social_media_handle || '',
+      profile_picture:     s.profile_picture || '',
+      banner:              s.banner || '',
+      state:               s.state || '',
+      city:                s.city || '',
+    });
+  };
+
+  const loadProfile = useCallback(async () => {
+    setPageLoading(true);
+    setLoadError(false);
+    try {
+      const fresh = await refreshSeller();
+      if (fresh) populateForm(fresh);
+    } catch (err) {
+      console.error(err);
+      setLoadError(true);
+    } finally {
+      setPageLoading(false);
+      setRetrying(false);
     }
+  }, [refreshSeller]);
+
+  useEffect(() => { loadProfile(); }, [loadProfile]);
+
+  const handleRetry = () => { setRetrying(true); loadProfile(); };
+
+  // Kept as a secondary sync (not the primary load path above) for cases
+  // where `seller` changes elsewhere in the app after this page has
+  // already loaded — e.g. another tab/action updating the store name.
+  useEffect(() => {
+    if (seller) populateForm(seller);
   }, [seller]);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -62,6 +96,26 @@ const SellerProfile = () => {
       setError(err.response?.data?.message || 'Update failed');
     } finally { setLoading(false); }
   };
+
+  if (pageLoading) {
+    return (
+      <SellerLayout title="Edit Profile">
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}><div className="spinner" /></div>
+      </SellerLayout>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <SellerLayout title="Edit Profile">
+        <LoadFailedModal
+          onRetry={handleRetry}
+          retrying={retrying}
+          message="We couldn't load your profile. Please check your connection and try again."
+        />
+      </SellerLayout>
+    );
+  }
 
   return (
     <SellerLayout title="Edit Profile">

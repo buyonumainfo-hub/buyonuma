@@ -14,8 +14,14 @@ import { NIGERIA_STATES, NIGERIA_CITIES_BY_STATE } from '../../utils/nigeriaLoca
  * Props: state, city (current values), onChange(field, value)
  */
 const LocationSelect = ({ state, city, onChange, required = true }) => {
+  const [stateFilter, setStateFilter] = useState('');
+const [cityFilter, setCityFilter] = useState('');
   const cityOptions = useMemo(() => NIGERIA_CITIES_BY_STATE[state] || [], [state]);
   const datalistId = 'buyonuma-city-suggestions';
+
+  const handleCityFilter = (value) => {
+  setCityFilter(value);
+};
 
   return (
     <div className="grid-2">
@@ -38,20 +44,18 @@ const LocationSelect = ({ state, city, onChange, required = true }) => {
       </div>
       <div className="form-group">
         <label className="form-label">City / Town {required && '*'}</label>
-        <input
-          className="form-control"
-          required={required}
-          list={datalistId}
-          placeholder={state ? 'e.g. ' + (cityOptions[0] || 'Enter your city/town') : 'Select a state first'}
-          value={city}
-          disabled={!state}
-          onChange={(e) => onChange('city', e.target.value)}
-        />
-        <datalist id={datalistId}>
-          {cityOptions.map((c) => (
-            <option key={c} value={c} />
-          ))}
-        </datalist>
+      <div className="filter-group">
+      <select
+        value={city}
+        onChange={(e) => onChange('city', e.target.value)}
+        className="form-control"
+        style={{ width: 'auto' }}
+        disabled={!state}
+      >
+        <option value="">{state ? 'All LGAs / Cities' : 'Select a state first'}</option>
+        {cityOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+      </select>
+    </div>
       </div>
     </div>
   );

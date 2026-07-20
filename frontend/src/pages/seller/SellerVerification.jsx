@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
-import { BadgeCheck, ShieldAlert, Clock, ShieldOff, Loader2 } from 'lucide-react';
+import { BadgeCheck, ShieldAlert, Clock, ShieldOff, Loader2, Fingerprint } from 'lucide-react';
 import SellerLayout from '../../components/seller/SellerLayout';
+import LoadFailedModal from '../../components/seller/LoadFailedModal';
+import SelfieCapture from '../../components/shared/SelfieCapture';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import './SellerVerification.css';
 
 const STATUS_META = {
-  none:     { icon: ShieldOff,  label: 'Not verified', color: '#8a8a8a', desc: 'Submit your NIN below to apply for the verified badge.' },
-  pending:  { icon: Clock,      label: 'Pending review', color: '#b8923a', desc: "We're checking your NIN. This usually takes a short while — you'll get a notification once it's reviewed." },
+  none:     { icon: ShieldOff,  label: 'Not verified', color: '#8a8a8a', desc: 'Submit your NIN and a selfie below to apply for the verified badge.' },
+  pending:  { icon: Clock,      label: 'Pending review', color: '#b8923a', desc: "We're checking your NIN and selfie. This usually takes a short while — you'll get a notification once it's reviewed." },
   verified: { icon: BadgeCheck, label: 'Verified', color: '#1ebe5d', desc: 'Your store shows the verified badge to all buyers.' },
   rejected: { icon: ShieldAlert,label: 'Not approved', color: '#e0453c', desc: 'Your last submission was not approved. You can review the reason below and try again.' },
 };
@@ -16,21 +18,29 @@ const SellerVerification = () => {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [nin, setNin] = useState('');
+  const [selfieUrl, setSelfieUrl] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   const fetchStatus = async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const res = await api.get('/verification/nin/status');
       setStatus(res.data);
     } catch (err) {
       console.error(err);
+      setLoadError(true);
     } finally {
       setLoading(false);
+      setRetrying(false);
     }
   };
 
   useEffect(() => { fetchStatus(); }, []);
+
+  const handleRetry = () => { setRetrying(true); fetchStatus(); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,14 +49,20 @@ const SellerVerification = () => {
       toast.error('NIN must be exactly 11 digits');
       return;
     }
+    if (!selfieUrl) {
+      toast.error('Please take or upload a selfie for face verification');
+      return;
+    }
     setSubmitting(true);
     try {
-      const res = await api.post('/verification/nin', { nin: trimmed });
-      toast.success(res.data.message || 'NIN submitted for review');
+      const res = await api.post('/verification/nin', { nin: trimmed, selfieUrl });
+      toast.success(res.data.message || 'NIN and selfie submitted for review');
       setNin('');
+      setSelfieUrl(null);
       fetchStatus();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not submit NIN');
+      toast.error(err.response?.data?.message || 'Could not submit for verification');
+      fetchStatus(); // an auto-rejection (bad face match / failed liveness) still counts as a status change
     } finally {
       setSubmitting(false);
     }
@@ -60,9 +76,18 @@ const SellerVerification = () => {
     );
   }
 
+  if (loadError) {
+    return (
+      <SellerLayout title="Verified Badge">
+        <LoadFailedModal onRetry={handleRetry} retrying={retrying} message="We couldn't load your verification status. Please check your connection and try again." />
+      </SellerLayout>
+    );
+  }
+
   const meta = STATUS_META[status?.ninStatus || 'none'];
   const Icon = meta.icon;
   const canSubmit = status?.ninStatus !== 'verified' && status?.ninStatus !== 'pending';
+  const hasFaceMatchData = typeof status?.ninFaceMatchScore === 'number' || typeof status?.ninLivenessPassed === 'boolean';
 
   return (
     <SellerLayout title="Verified Badge">
@@ -74,6 +99,17 @@ const SellerVerification = () => {
             <p className="seller-verification-status-desc">{meta.desc}</p>
           </div>
         </div>
+
+        {hasFaceMatchData && (
+          <div className="seller-verification-facematch">
+            <Fingerprint size={15} />
+            <span>
+              {typeof status.ninFaceMatchScore === 'number' && `Face match: ${status.ninFaceMatchScore}%`}
+              {typeof status.ninFaceMatchScore === 'number' && typeof status.ninLivenessPassed === 'boolean' && ' · '}
+              {typeof status.ninLivenessPassed === 'boolean' && (status.ninLivenessPassed ? 'Liveness check passed' : 'Liveness check failed')}
+            </span>
+          </div>
+        )}
 
         {status?.ninStatus === 'rejected' && status?.ninRejectionReason && (
           <div className="seller-verification-reason">
@@ -98,7 +134,18 @@ const SellerVerification = () => {
                 identity for the verified badge. See our <a href="/privacy">Privacy Policy</a> for details.
               </p>
             </div>
-            <button type="submit" className="btn btn-primary" disabled={submitting || nin.length !== 11}>
+
+            <div className="form-group">
+              <label className="form-label">Selfie for Face Verification</label>
+              <SelfieCapture onCapture={setSelfieUrl} disabled={submitting} />
+              <p className="seller-verification-hint">
+                Take a clear, well-lit selfie facing the camera directly. This is matched against the
+                photo on record for your NIN to confirm you're a real person and the rightful owner
+                of the ID.
+              </p>
+            </div>
+
+            <button type="submit" className="btn btn-primary" disabled={submitting || nin.length !== 11 || !selfieUrl}>
               {submitting ? <><Loader2 size={15} className="spin" /> Submitting…</> : 'Submit for Verification'}
             </button>
           </form>

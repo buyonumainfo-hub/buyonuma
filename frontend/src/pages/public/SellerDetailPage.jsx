@@ -7,6 +7,7 @@ import ProductCard from '../../components/public/ProductCard';
 import api from '../../utils/api';
 import { CATEGORY_ICONS } from '../../utils/constants';
 import { trackView } from '../../utils/trackView';
+import OptimizedImage from '../../components/shared/OptimizedImage';
 import './SellerDetailPage.css';
 
 
@@ -49,7 +50,7 @@ const ImageLightbox = ({ src, alt, onClose }) => {
         <X size={22} />
       </button>
       <div className="lightbox-content" onClick={(e) => e.stopPropagation()}>
-        <img src={src} alt={alt} className="lightbox-img" />
+        <OptimizedImage src={src} alt={alt} className="lightbox-img" width={1600} priority />
       </div>
     </div>
   );
@@ -111,7 +112,7 @@ const SellerDetailPage = () => {
         <div className="seller-detail-banner">
           {seller.banner ? (
             <>
-              <img src={seller.banner} alt={seller.store_name} />
+              <OptimizedImage src={seller.banner} alt={seller.store_name} width={1200} height={280} priority />
               {/* Overlay is purely visual, non-blocking */}
               <div className="seller-detail-banner-overlay" style={{ pointerEvents: 'none' }} />
               {/* Click trigger sits on top of everything */}
@@ -145,7 +146,7 @@ const SellerDetailPage = () => {
                   onClick={() => openLightbox(seller.profile_picture, seller.username)}
                   aria-label="View profile picture"
                 >
-                  <img src={seller.profile_picture} alt={seller.username} />
+                  <OptimizedImage src={seller.profile_picture} alt={seller.username} width={160} height={160} priority />
                   <span className="avatar-zoom-hint">
                     <ZoomIn size={16} />
                   </span>
@@ -163,7 +164,10 @@ const SellerDetailPage = () => {
               <h1 className="seller-detail-name">
                 {seller.store_name}
                 {seller.ninStatus === 'verified' && (
-                  <BadgeCheck size={20} style={{ color: '#1ebe5d', verticalAlign: 'middle', marginLeft: '0.35rem' }} title="Verified seller" />
+                  <span className="seller-card-verified" title="This seller has completed NIN + face verification">
+            <BadgeCheck size={12} /> Verified
+          </span>
+                  // <BadgeCheck size={20} style={{ color: '#1ebe5d', verticalAlign: 'middle', marginLeft: '0.35rem' }} title="Verified seller" />
                 )}
               </h1>
               <p className="seller-detail-username">@{seller.username}</p>

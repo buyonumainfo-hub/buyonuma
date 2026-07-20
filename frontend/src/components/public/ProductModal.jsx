@@ -6,6 +6,7 @@ import { CATEGORY_ICONS } from '../../utils/constants';
 import { useCart } from '../../context/CartContext';
 import { useViewedProduct } from '../../context/ViewedProductContext';
 import { trackView } from '../../utils/trackView';
+import OptimizedImage from '../shared/OptimizedImage';
 import toast from 'react-hot-toast';
 import './ProductCard.css';
 
@@ -88,7 +89,7 @@ export default function ProductModal({ product, onClose }){
           
             {images.length > 0 ? (
               <>
-                <img src={images[activeIdx]} alt={product.name} className="pvm-main-image" />
+                <OptimizedImage src={images[activeIdx]} alt={product.name} className="pvm-main-image" width={800} priority />
                 {images.length > 1 && (
                   <>
                     <button className="pvm-nav pvm-nav-left" onClick={prev}><ChevronLeft size={20}/></button>
@@ -107,7 +108,7 @@ export default function ProductModal({ product, onClose }){
             <div className="pvm-thumbs">
               {images.map((img, i) => (
                 <button key={i} className={`pvm-thumb ${i===activeIdx?'active':''}`} onClick={() => setActiveIdx(i)}>
-                  <img src={img} alt={`${product.name} ${i+1}`} />
+                  <OptimizedImage src={img} alt={`${product.name} ${i+1}`} width={120} height={120} />
                 </button>
               ))}
             </div>
@@ -144,7 +145,7 @@ export default function ProductModal({ product, onClose }){
                 onClick={onClose}
               >
                 {product.seller.profile_picture ? (
-                  <img src={product.seller.profile_picture} alt={product.seller.store_name} />
+                  <OptimizedImage src={product.seller.profile_picture} alt={product.seller.store_name} width={64} height={64} />
                 ) : (
                   <span className="seller-initial">{product.seller.store_name?.[0]}</span>
                 )}

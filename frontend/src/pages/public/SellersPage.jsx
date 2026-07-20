@@ -295,7 +295,7 @@ const SellersPage = () => {
             )}
           </div>
         </div>
-
+      <p style={{fontSize: "12px"}}>Scroll for categories ➡️</p><br />
         {/* Category pills */}
   <div className="category-scroll">
            {CATEGORIES.map(cat => (

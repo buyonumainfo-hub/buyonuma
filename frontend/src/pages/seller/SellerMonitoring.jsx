@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Eye, Phone, Package, Loader2, ShoppingCart } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import SellerLayout from '../../components/seller/SellerLayout';
+import LoadFailedModal from '../../components/seller/LoadFailedModal';
 import api from '../../utils/api';
 import './SellerMonitoring.css';
 
@@ -24,13 +25,23 @@ const SellerMonitoring = () => {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   const fetchAnalytics = useCallback((silent = false) => {
     if (silent) setRefreshing(true);
+    else setLoadError(false);
     api.get('/monitoring/seller')
-      .then(res => setAnalytics(res.data))
-      .catch(console.error)
-      .finally(() => { setLoading(false); setRefreshing(false); });
+      .then(res => { setAnalytics(res.data); if (!silent) setLoadError(false); })
+      .catch((err) => {
+        console.error(err);
+        // Only surface the retry modal for the initial foreground load —
+        // a background poll failing once every 30s shouldn't interrupt
+        // the seller with a modal while they're looking at data that
+        // already loaded fine the first time.
+        if (!silent) setLoadError(true);
+      })
+      .finally(() => { setLoading(false); setRefreshing(false); setRetrying(false); });
   }, []);
 
   useEffect(() => {
@@ -39,6 +50,16 @@ const SellerMonitoring = () => {
     const interval = setInterval(() => fetchAnalytics(true), 30000);
     return () => clearInterval(interval);
   }, [fetchAnalytics]);
+
+  const handleRetry = () => { setRetrying(true); fetchAnalytics(); };
+
+  if (loadError) {
+    return (
+      <SellerLayout title="Monitoring">
+        <LoadFailedModal onRetry={handleRetry} retrying={retrying} />
+      </SellerLayout>
+    );
+  }
 
   if (loading) {
     return (

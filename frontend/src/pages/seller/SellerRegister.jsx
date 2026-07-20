@@ -117,23 +117,9 @@ const SellerRegister = () => {
 
           <div className="form-section-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
             <span>Location</span>
-            <button
-              type="button"
-              onClick={handleUseMyLocation}
-              disabled={geoStatus === 'locating'}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.3rem',
-                fontSize: '0.72rem', background: 'none', border: '1px solid var(--gold, #b8923a)',
-                borderRadius: '6px', padding: '0.3rem 0.6rem', cursor: 'pointer', color: 'var(--gold, #b8923a)',
-              }}
-            >
-              <MapPin size={13} />
-              {geoStatus === 'locating' ? 'Detecting…' : 'Use my current location'}
-            </button>
+           
           </div>
-          {geoStatus === 'denied' || geoStatus === 'error' ? (
-            <p style={{ fontSize: '0.72rem', color: 'var(--ink-muted)', marginTop: '-0.5rem' }}>{geoError}</p>
-          ) : null}
+         
           <LocationSelect state={form.state} city={form.city} onChange={set} />
 
           <div className="form-section-label">Store Info</div>
@@ -151,38 +137,38 @@ const SellerRegister = () => {
             </div>
           </div>
           <div className="form-group">
-            <label className="form-label">Description</label>
+            <label className="form-label">Description (optional)</label>
             <textarea className="form-control" rows={3} placeholder="What do you sell?"
               value={form.description} onChange={e => set('description', e.target.value)} />
           </div>
 
-          <div className="form-section-label">Contact</div>
+          <div className="form-section-label">Contact *</div>
           <div className="grid-2">
             <div className="form-group">
-              <label className="form-label">Phone</label>
+              <label className="form-label">Phone *</label>
               <input className="form-control" placeholder="+2348012345678"
-                value={form.contact} onChange={e => set('contact', e.target.value)} />
+                value={form.contact} onChange={e => set('contact', e.target.value)} required/>
             </div>
             <div className="form-group">
-              <label className="form-label">WhatsApp Number</label>
+              <label className="form-label">WhatsApp Number *</label>
               <input className="form-control" placeholder="08012345678 (no +)"
-                value={form.whatsapp} onChange={e => set('whatsapp', e.target.value.replace(/\D/g, ''))} />
+                value={form.whatsapp} onChange={e => set('whatsapp', e.target.value.replace(/\D/g, ''))} required/>
             </div>
           </div>
           <div className="grid-2">
             <div className="form-group">
-              <label className="form-label">Website</label>
+              <label className="form-label">Website (optional)</label>
               <input className="form-control" placeholder="https://..."
                 value={form.website} onChange={e => set('website', e.target.value)} />
             </div>
             <div className="form-group">
-              <label className="form-label">TikTok</label>
+              <label className="form-label">TikTok (optional)</label>
               <input className="form-control" placeholder="your TikTok username eg. user1234"
                 value={form.social_media_handle} onChange={e => set('social_media_handle', e.target.value)} />
             </div>
           </div>
 
-          <div className="form-section-label">Images</div>
+          <div className="form-section-label">Images (optional)</div>
           <div className="grid-2">
             <div className="form-group">
               <label className="form-label">Profile Picture</label>
@@ -196,7 +182,7 @@ const SellerRegister = () => {
               </label>
             </div>
             <div className="form-group">
-              <label className="form-label">Store Banner</label>
+              <label className="form-label">Store Banner </label>
               <label className="upload-btn">
                 {uploading.banner ? <span>Uploading…</span>
                   : form.banner

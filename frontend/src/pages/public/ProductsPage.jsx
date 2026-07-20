@@ -70,6 +70,7 @@ const res = await api.get('/products', { params: {
   city: isNearest ? userLocation.city : (ct || undefined),
 } });
 data = res.data;
+console.log(data)
 fCache.set(key, data, 30);
 }
 const incoming = data.products || [];
@@ -196,6 +197,7 @@ return (
 )}
 </div>
 </div>
+<p style={{fontSize: "12px"}}>Scroll for categories ➡️</p><br />
  <div className="category-scroll">
           {CATEGORIES.map(cat => (
             <button key={cat}

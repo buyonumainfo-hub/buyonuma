@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Plus, Pencil, Clock, Trash2, X, Package } from 'lucide-react';
 import SellerLayout from '../../components/seller/SellerLayout';
+import LoadFailedModal from '../../components/seller/LoadFailedModal';
 import Pagination from '../../components/shared/Pagination';
 import MultiImageUploader from '../../components/shared/MultiImageUploader';
 import { CATEGORIES_NO_ALL, CATEGORY_ICONS } from '../../utils/constants';
@@ -134,21 +135,28 @@ export default function SellerProducts() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [modal, setModal] = useState(null);
+  const [loadError, setLoadError] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const res = await api.get(`/seller/products?page=${page}&limit=10`);
       setProducts(res.data.products);
       setPagination(res.data.pagination);
     } catch (e) {
       console.error(e);
+      setLoadError(true);
     } finally {
       setLoading(false);
+      setRetrying(false);
     }
   }, [page]);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
+
+  const handleRetry = () => { setRetrying(true); fetchProducts(); };
 
   const handleDelete = async (id) => {
     try {
@@ -182,7 +190,9 @@ export default function SellerProducts() {
         </button>
       </div>
 
-      {loading ? (
+      {loadError ? (
+        <LoadFailedModal onRetry={handleRetry} retrying={retrying} message="We couldn't load your products. Please check your connection and try again." />
+      ) : loading ? (
         <div className="spinner" />
       ) : products.length === 0 ? (
         <div className="empty-state">

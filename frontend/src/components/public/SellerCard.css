@@ -83,7 +83,25 @@
   align-items: center;
   gap: 0.3rem;
 }
-.verified-badge-icon { color: #1ebe5d; flex-shrink: 0; }
+.verified-badge-icon { color: #0004ff; flex-shrink: 0; }
+
+.seller-card-verified-pill {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #1e1ebe;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 0.25rem 0.55rem;
+  border-radius: 100px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+}
 
 .seller-card-username {
   font-size: 0.78rem;

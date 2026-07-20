@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, Key, Clock, ArrowRight, AlertCircle, CheckCircle, BarChart3 } from 'lucide-react';
 import SellerLayout from '../../components/seller/SellerLayout';
+import LoadFailedModal from '../../components/seller/LoadFailedModal';
 import { useSellerAuth } from '../../context/SellerAuthContext';
 import api from '../../utils/api';
 import './SellerDashboard.css';
@@ -13,8 +14,11 @@ const SellerDashboard = () => {
   const [stats, setStats]   = useState({ total: 0, active: 0 });
   const [tokenStatus, setTokenStatus] = useState(null);
   const [loading, setLoading] = useState(true);
- //console.log(tokenStatus)
-  useEffect(() => {
+  const [loadError, setLoadError] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+
+  const fetchDashboard = useCallback(() => {
+    setLoadError(false);
     Promise.all([
       api.get('/seller/products'),
       api.get('/seller/token-status')
@@ -26,9 +30,15 @@ const SellerDashboard = () => {
         active: products.filter(p => !p.expires_at || new Date(p.expires_at) > now).length
       });
       setTokenStatus(tRes.data);
-    }).catch(console.error)
-      .finally(() => setLoading(false));
+    }).catch((err) => {
+      console.error(err);
+      setLoadError(true);
+    }).finally(() => { setLoading(false); setRetrying(false); });
   }, []);
+
+  useEffect(() => { fetchDashboard(); }, [fetchDashboard]);
+
+  const handleRetry = () => { setRetrying(true); fetchDashboard(); };
 
   const formatExpiry = (date) => {
     if (!date) return null;
@@ -42,6 +52,7 @@ const SellerDashboard = () => {
 
   return (
     <SellerLayout title="Dashboard">
+      {loadError && <LoadFailedModal onRetry={handleRetry} retrying={retrying} />}
       <div className="seller-dash fade-up">
 
         {/* Approval warning */}
@@ -52,7 +63,6 @@ const SellerDashboard = () => {
               <strong>Awaiting Admin Approval</strong>
               <p>Your account is under review. You can set up your store but cannot post products until approved.</p>
               <p>Message Admin on whatsapp to approve your account.</p>
-              <p>text on whatsapp {ADMIN_WA}</p>
                <a
             href={`https://wa.me/${ADMIN_WA}?text=${encodeURIComponent(`Hi! I just registered on BuyOnUma. Please approve my seller account.\nStore: ${seller?.store_name} (@${seller?.username})`)}`}
             className="btn btn-wa btn-lg"
@@ -83,13 +93,11 @@ const SellerDashboard = () => {
           <div className="seller-stat-card">
             <div className="seller-stat-icon active"><Package size={22} /></div>
             <div>
-              <p className="seller-stat-num">{loading ? '—' : stats.total}</p>
+              <p className="seller-stat-num">{loading ? '—' : stats.active}</p>
               <p className="seller-stat-label">Active / Visible</p>
             </div>
           </div>
-          {
-            tokenStatus?.token_required && (
-                 <div className="seller-stat-card">
+          <div className="seller-stat-card">
             <div className="seller-stat-icon token"><Key size={22} /></div>
             <div>
               <p className="seller-stat-num" style={{ fontSize: '1rem' }}>
@@ -100,13 +108,10 @@ const SellerDashboard = () => {
               <p className="seller-stat-label">Token Status</p>
             </div>
           </div>
-            )
-          }
-       
         </div>
 
         {/* Token banner */}
-        {!loading && !tokenStatus?.has_active_token && seller?.isApproved && tokenStatus?.token_required && (
+        {!loading && !tokenStatus?.has_active_token && seller?.isApproved && (
           <div className="dash-token-banner" >
             <Key size={20} />
             <div>

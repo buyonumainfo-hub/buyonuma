@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Bell, CheckCheck, Loader2, Info, CheckCircle, AlertTriangle, BadgeCheck, Megaphone, Key } from 'lucide-react';
 import SellerLayout from '../../components/seller/SellerLayout';
+import LoadFailedModal from '../../components/seller/LoadFailedModal';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import './SellerNotifications.css';
@@ -31,21 +32,28 @@ const SellerNotifications = () => {
   const [pushSupported, setPushSupported] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   const fetchNotifications = useCallback(async (pageNum = 1) => {
     setLoading(true);
+    setLoadError(false);
     try {
       const res = await api.get('/notifications/seller', { params: { page: pageNum, limit: 20 } });
       setNotifications(res.data.notifications || []);
       setPagination(res.data.pagination);
     } catch (err) {
       console.error(err);
+      setLoadError(true);
     } finally {
       setLoading(false);
+      setRetrying(false);
     }
   }, []);
 
   useEffect(() => { fetchNotifications(page); }, [page, fetchNotifications]);
+
+  const handleRetry = () => { setRetrying(true); fetchNotifications(page); };
 
   useEffect(() => {
     setPushSupported('serviceWorker' in navigator && 'PushManager' in window);
@@ -118,7 +126,9 @@ const SellerNotifications = () => {
         </div>
       </div>
 
-      {loading ? (
+      {loadError ? (
+        <LoadFailedModal onRetry={handleRetry} retrying={retrying} message="We couldn't load your notifications. Please check your connection and try again." />
+      ) : loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}><div className="spinner" /></div>
       ) : notifications.length === 0 ? (
         <div className="empty-state">

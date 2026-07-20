@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Star, ExternalLink, MapPin, BadgeCheck } from 'lucide-react';
 import { CATEGORY_ICONS } from '../../utils/constants';
+import OptimizedImage from '../shared/OptimizedImage';
 import './SellerCard.css';
 
 const Stars = ({ rating }) => (
@@ -24,15 +25,20 @@ const SellerCard = ({ seller }) => {
     <Link to={`/${seller.username}`} className="seller-card card">
       <div className="seller-card-banner">
         {seller.banner ? (
-          <img src={seller.banner} alt={seller.store_name} />
+          <OptimizedImage src={seller.banner} alt={seller.store_name} width={560} height={240} />
         ) : (
           <div className="seller-card-banner-placeholder">
             <span>{icon}</span>
           </div>
         )}
+        {seller.ninStatus === 'verified' && (
+          <span className="seller-card-verified-pill" title="This seller has completed NIN + face verification">
+            <BadgeCheck size={12} /> Verified
+          </span>
+        )}
         <div className="seller-card-avatar">
           {seller.profile_picture ? (
-            <img src={seller.profile_picture} alt={seller.username} />
+            <OptimizedImage src={seller.profile_picture} alt={seller.username} width={96} height={96} />
           ) : (
             <span>{seller.store_name?.[0]?.toUpperCase()}</span>
           )}

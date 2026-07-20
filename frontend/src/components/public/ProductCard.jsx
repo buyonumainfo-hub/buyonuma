@@ -7,6 +7,7 @@ import ProductModal from './ProductModal';
 import ProductViewModal from './ProductViewModal';
 import { useCart } from '../../context/CartContext';
 import { trackView } from '../../utils/trackView';
+import OptimizedImage from '../shared/OptimizedImage';
 import toast from 'react-hot-toast';
 import './ProductCard.css';
 
@@ -44,7 +45,7 @@ const ProductCard = ({ product }) => {
       <div className="product-card card">
         <div className="product-card-image">
           {product.product_image ? (
-            <img src={product.product_image} alt={product.name} />
+            <OptimizedImage src={product.product_image} alt={product.name} width={400} height={360} />
           ) : (
             <div className="product-card-image-placeholder">
               <span>{icon}</span>
@@ -72,7 +73,7 @@ const ProductCard = ({ product }) => {
             {product.seller && (
               <Link to={`/${product.seller.username}`} className="product-seller-link">
                 {product.seller.profile_picture ? (
-                  <img src={product.seller.profile_picture} alt={product.seller.store_name} />
+                  <OptimizedImage src={product.seller.profile_picture} alt={product.seller.store_name} width={64} height={64} />
                 ) : (
                   <span className="seller-initial">{product.seller.store_name?.[0]}</span>
                 )}
@@ -93,26 +94,25 @@ const ProductCard = ({ product }) => {
             {imageCount > 1 && <span className=" product-card-timeframe view-productbtn">{imageCount} photos</span>}
           
             <ExternalLink size={13} />
-          
             View Product
           </button>
 
           <div className="product-card-actions">
             <button className={`btn ${inCart ? 'btn-outline' : 'btn-primary'} product-card-cart-btn`} onClick={handleAddToCart}>
-              {inCart ? <><ShoppingCart size={13} /><Check size={13} /></> : <><ShoppingCart size={13} /></>}
+              {inCart ? <><Check size={13} /> In Cart</> : <><ShoppingCart size={13} /> Add to Cart</>}
             </button>
             {(product.seller?.contact || product.seller?.whatsapp) && (
               <button className="btn btn-outline product-card-cart-btn" onClick={(e) => { e.stopPropagation(); setShowContact(v => !v); }}>
-                <Phone size={13} />
+                <Phone size={13} /> Contact
               </button>
             )}
           </div>
 
           {showContact && (product.seller?.contact || product.seller?.whatsapp) && (
             <div className="product-contact-reveal">
-              {/* {product.seller.contact && (
+              {product.seller.contact && (
                 <a href={`tel:${product.seller.contact}`} className="contact-item"><Phone size={13} /> <span>{product.seller.contact}</span></a>
-              )} */}
+              )}
               {product.seller.whatsapp && (
                 <a href={`tel:${product.seller.whatsapp}`} className="contact-item"><Phone size={13} /> <span>{product.seller.whatsapp}</span></a>
               )}
