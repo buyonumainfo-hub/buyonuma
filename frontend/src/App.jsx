@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {ScrollRestoration, BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -45,6 +46,7 @@ import SellerProfile        from './pages/seller/SellerProfile';
 import SellerNotifications  from './pages/seller/SellerNotifications';
 import SellerVerification   from './pages/seller/SellerVerification';
 import SellerMonitoring     from './pages/seller/SellerMonitoring';
+import LoadFailedModal      from './components/seller/LoadFailedModal';
 
 const Spinner = () => (
   <div style={{ display:'flex', justifyContent:'center', alignItems:'center', height:'100vh' }}>
@@ -64,8 +66,31 @@ const AdminPublic = ({ children }) => {
 };
 
 const SellerProtected = ({ children }) => {
-  const { isAuthenticated, loading } = useSellerAuth();
+  const { isAuthenticated, loading, authError, retryAuth } = useSellerAuth();
+  const [retrying, setRetrying] = useState(false);
+
   if (loading) return <Spinner />;
+
+  // BUG FIX: previously, ANY failure of the initial auth check — a
+  // network blip, a backend 500, a rate limit — fell straight through to
+  // `!isAuthenticated` and redirected to /seller/login, even for a
+  // seller with a perfectly valid session. That's what made pages like
+  // Profile (and every other seller page) appear to silently fail or
+  // "lose" the seller with no explanation. A genuine load error now
+  // shows a retry option instead of assuming the seller is logged out.
+  if (authError) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--cream, #faf8f3)' }}>
+        <LoadFailedModal
+          onRetry={() => { setRetrying(true); retryAuth(); }}
+          retrying={retrying}
+          title="Couldn't verify your session"
+          message="We couldn't reach the server to confirm you're signed in. Please check your connection and try again — you won't be logged out."
+        />
+      </div>
+    );
+  }
+
   return isAuthenticated ? children : <Navigate to="/seller/login" replace />;
 };
 const SellerPublic = ({ children }) => {

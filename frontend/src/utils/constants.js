@@ -5,13 +5,14 @@ export const CATEGORIES = [
   "Clothing",
   "Shoes",
   "Perfumes",
-  "Textbooks", 
-  "Electronics", 
-  "Services",
-  "Phones & Accessories", 
   "Beauty & Skincare", 
+  "Electronics", 
+  "Phones & Accessories",
+  "Art & Design", 
+  "Textbooks", 
+  "Services",
   "Furniture & Home Decor", "Health & Fitness", 
-  "Stationery & Supplies", "Event Tickets", "Art & Design", 
+  "Stationery & Supplies", "Event Tickets",
   "Rentals",
   'Other'
 ];
@@ -20,7 +21,6 @@ export const CATEGORIES_NO_ALL = CATEGORIES.slice(1);
 
 export const SORT_OPTIONS = [
     { value: 'tiktokScore', label: 'default sort', order: null },
-  { value: 'nearest', label: '📍 Nearest to me', order: null },
   { value: 'createdAt', label: 'Newest First', order: 'desc' },
   { value: 'createdAt', label: 'Oldest First', order: 'asc' },
   { value: 'rating', label: 'Highest Rated', order: 'desc' },
