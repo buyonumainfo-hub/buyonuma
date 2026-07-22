@@ -7,7 +7,7 @@ import { useSellerAuth } from '../../context/SellerAuthContext';
 import api from '../../utils/api';
 import './SellerDashboard.css';
 
-const ADMIN_WA = '2348077128030';
+const ADMIN_WA = '2349034611394';
 
 const SellerDashboard = () => {
   const { seller } = useSellerAuth();
@@ -61,8 +61,8 @@ const SellerDashboard = () => {
             <AlertCircle size={18} />
             <div>
               <strong>Awaiting Admin Approval</strong>
+               <p>Message Admin on whatsapp " 09034611394 " to approve your account or click the buuton below. </p>
               <p>Your account is under review. You can set up your store but cannot post products until approved.</p>
-              <p>Message Admin on whatsapp to approve your account.</p>
                <a
             href={`https://wa.me/${ADMIN_WA}?text=${encodeURIComponent(`Hi! I just registered on BuyOnUma. Please approve my seller account.\nStore: ${seller?.store_name} (@${seller?.username})`)}`}
             className="btn btn-wa btn-lg"

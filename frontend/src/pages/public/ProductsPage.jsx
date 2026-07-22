@@ -40,6 +40,8 @@ const stateFilterRef = useRef('');
 const cityFilterRef = useRef('');
 const sentinelRef = useRef(null);
 const observerRef = useRef(null);
+const searchDebounceRef = useRef(null);
+const isFirstSearchRender = useRef(true);
 
 const doFetch = useCallback(async (pageNum) => {
 if (isFetchingRef.current) return;
@@ -112,7 +114,32 @@ useEffect(() => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [geoStatus, userLocation]);
 
-const handleSearch = (e) => { e.preventDefault(); searchRef.current = search; fCache.delPrefix('products:'); resetAndFetch(); };
+// Live search: refetch a short moment after the user stops typing,
+// instead of requiring a click on the Search button. Skips the very
+// first render so it doesn't double-fire alongside the initial doFetch(1).
+useEffect(() => {
+  if (isFirstSearchRender.current) {
+    isFirstSearchRender.current = false;
+    return;
+  }
+  if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+  searchDebounceRef.current = setTimeout(() => {
+    searchRef.current = search;
+    fCache.delPrefix('products:');
+    resetAndFetch();
+  }, 200);
+
+  return () => clearTimeout(searchDebounceRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [search]);
+
+const handleSearch = (e) => {
+  e.preventDefault();
+  if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+  searchRef.current = search;
+  fCache.delPrefix('products:');
+  resetAndFetch();
+};
 const handleCategory = (cat) => { setCategory(cat); categoryRef.current = cat; fCache.delPrefix('products:'); resetAndFetch(); };
 const handleSort = (idx) => {
   setSortIdx(idx); sortIdxRef.current = idx; fCache.delPrefix('products:');
@@ -154,8 +181,11 @@ return (
 <div className="container" style={{ padding:'3rem 2rem' }}>
 <div className="filters-bar">
 <form className="search-form" onSubmit={handleSearch}>
-<Search size={16}/><input type="text" placeholder="Search products..." value={search} onChange={e => setSearch(e.target.value)} className="search-input"/>
-<button type="submit" className="btn btn-primary btn-sm">Search</button>
+<Search size={16}/><input type="text" placeholder="Search products..." value={search} onChange={e =>{
+    setSearch(e.target.value);
+  
+   }} className="search-input"/>
+<button type="submit" className="btn btn-primary btn-sm"><Search size={13}/></button>
 </form>
 <div className="filters-right">
 <div className="filter-group"><SlidersHorizontal size={14}/>

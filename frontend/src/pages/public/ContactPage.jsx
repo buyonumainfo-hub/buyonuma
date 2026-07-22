@@ -21,15 +21,15 @@ const contactCards = [
   {
     icon: <Phone size={22} />,
     label: 'Call Us',
-    value: '+234 80 7712 8030',
-    href: 'tel:+2348077128030',
+    value: '+234 903 461 1394',
+    href: 'tel:+2349034611394',
     sub: 'Mon – Fri, 8am – 5pm'
   },
   {
     icon: <WhatsAppIcon />,
     label: 'WhatsApp',
     value: 'Chat with us',
-    href: 'https://wa.me/2348077128030?text=Hello%20Lens%20University%20Market%20Admin',
+    href: 'https://wa.me/2349034611394?text=Hello%20Lens%20University%20Market%20Admin',
     sub: 'Quick responses',
     green: true
   },
@@ -95,7 +95,7 @@ const ContactPage = () => {
         <div className="container">
           <div className="contact-cards-grid">
             {contactCards.map((c, i) => (
-              <div key={i} className={`contact-card ${c.green ? 'contact-card-wa' : ''}`}>
+              <div key={i} className={`contact-card ${c.green ? 'contact-card-w' : ''}`}>
                 <div className={`contact-card-icon ${c.green ? 'wa-icon' : ''}`}>{c.icon}</div>
                 <div>
                   <p className="contact-card-label">{c.label}</p>
