@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('lens_admin_token');
     if (token) {
-      api.get('/auth/verify')
+      api.get('/auth/verify', { authRole: 'admin' })
         .then(() => setIsAuthenticated(true))
         .catch(() => {
           localStorage.removeItem('lens_admin_token');
@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (username, password) => {
-    const res = await api.post('/auth/login', { username, password });
+    const res = await api.post('/auth/login', { username, password }, { authRole: 'admin' });
     localStorage.setItem('lens_admin_token', res.data.token);
     setIsAuthenticated(true);
     return res.data;

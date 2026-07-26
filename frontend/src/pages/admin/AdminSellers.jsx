@@ -61,11 +61,11 @@ const SellerModal = ({ seller, onClose, onSaved }) => {
       const payload = { ...form };
       if (!payload.password) delete payload.password;
       if (isEdit) {
-        await api.put(`/sellers/${seller._id}`, payload);
+        await api.put(`/sellers/admin/${seller._id}`, payload);
         toast.success('Seller updated!');
       } else {
         if (!payload.password) return setError('Password is required for new sellers');
-        await api.post('/sellers', payload);
+        await api.post('/sellers/admin', payload);
         toast.success('Seller added!');
       }
       onSaved(); onClose();
@@ -189,14 +189,14 @@ const AdminSellers = () => {
   useEffect(() => { fetchSellers(); }, [fetchSellers]);
 
   const handleDelete = async (id) => {
-    try { await api.delete(`/sellers/${id}`); toast.success('Seller deleted'); fetchSellers(); }
+    try { await api.delete(`/sellers/admin/${id}`); toast.success('Seller deleted'); fetchSellers(); }
     catch (err) { toast.error(err.response?.data?.message || 'Delete failed'); }
     finally { setDeleteId(null); }
   };
 
   const toggleApprove = async (s) => {
     try {
-      await api.patch(`/sellers/${s._id}/approve`, { isApproved: !s.isApproved });
+      await api.patch(`/sellers/admin/${s._id}/approve`, { isApproved: !s.isApproved });
       toast.success(s.isApproved ? 'Seller suspended' : 'Seller approved');
       fetchSellers();
     } catch { toast.error('Failed'); }

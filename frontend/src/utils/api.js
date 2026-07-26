@@ -34,11 +34,13 @@ const nextBaseURL = () => {
 const api = axios.create({ baseURL: API_URLS[0] });
 
 /**
- * Decide whether a request URL belongs to an admin route or a seller
- * route, so we can pick the matching token instead of blindly always
- * preferring one over the other. Shared by both the request interceptor
- * (which token to send) and the response interceptor (which login page
- * to redirect to on a 401), so the two stay consistent.
+ * Fallback heuristic only — used when a request doesn't explicitly say
+ * which token it needs via config.authRole. Kept for any call sites that
+ * haven't been updated yet, but every call in this codebase should now
+ * pass `authRole: 'admin' | 'seller'` explicitly instead of relying on
+ * this, because shared routes like /auth/login and /auth/verify don't
+ * contain '/admin' or '/seller' in their URL and would otherwise fall
+ * through to the wrong token.
  */
 const isAdminRoute = (url) => Boolean(url && url.includes('/admin'));
 
@@ -46,22 +48,29 @@ api.interceptors.request.use((config) => {
   // Round-robin the base URL across configured servers.
   config.baseURL = nextBaseURL();
 
-  // Pick the token based on which kind of route this is, not a blind
-  // "admin always wins" priority — otherwise a browser that's ever
-  // logged in as admin keeps sending the admin token to seller routes
-  // and gets rejected with "seller access required", even though the
-  // person is properly logged in as a seller.
   const adminToken  = localStorage.getItem('lens_admin_token');
   const sellerToken = localStorage.getItem('lens_seller_token');
 
-  const token = isAdminRoute(config.url)
-    ? (adminToken || sellerToken)
-    : (sellerToken || adminToken);
+  // Explicit > inferred: if the caller tells us which token this request
+  // needs (config.authRole), trust that completely. This is what fixes
+  // shared endpoints like /auth/login and /auth/verify, whose URL gives
+  // no clue whether they're being hit from the admin panel or the seller
+  // panel — URL sniffing alone silently sent the wrong token whenever
+  // both tokens existed in localStorage at once.
+  let token;
+  if (config.authRole === 'admin') {
+    token = adminToken;
+  } else if (config.authRole === 'seller') {
+    token = sellerToken;
+  } else {
+    // Legacy fallback for any call site not yet passing authRole.
+    token = isAdminRoute(config.url)
+      ? (adminToken || sellerToken)
+      : (sellerToken || adminToken);
+  }
 
   if (token) config.headers.Authorization = `Bearer ${token}`;
 
-  // Track which server handled this request, and how many times we've
-  // retried it, so the failover logic below knows when to stop.
   config._retryCount = config._retryCount || 0;
   return config;
 });
@@ -71,9 +80,6 @@ api.interceptors.response.use(
   async (err) => {
     const config = err.config;
 
-    // Failover: retry against the next server if this looks like a
-    // server-side/network problem (not a normal 4xx the user should see),
-    // and we haven't already exhausted all configured servers.
     const isNetworkOrServerError = !err.response || (err.response.status >= 500);
     if (config && isNetworkOrServerError && config._retryCount < API_URLS.length - 1) {
       config._retryCount += 1;
@@ -86,11 +92,6 @@ api.interceptors.response.use(
     }
 
     if (err.response?.status === 429) {
-      // Backend sends { retryAfter: <seconds>, message } on every rate
-      // limiter (see backend/middleware/rateLimiter.js). Show it as a
-      // single toast per hit rather than letting each page re-implement
-      // this — one toast id per URL so rapid repeated hits (e.g. a user
-      // mashing a button) don't stack duplicate toasts.
       const data = err.response.data || {};
       const retryAfter = data.retryAfter;
       const message = data.message || 'Too many requests. Please slow down and try again shortly.';
@@ -100,12 +101,11 @@ api.interceptors.response.use(
     }
 
     if (err.response?.status === 401) {
-      // Redirect based on which kind of route actually rejected us,
-      // using the same isAdminRoute check the request interceptor uses
-      // to pick the token — so we don't send someone to /admin/login
-      // for a 401 that came back from a seller route (or vice versa)
-      // just because an admin token happens to also be sitting around.
-      if (isAdminRoute(err.config?.url)) {
+      // Use the same explicit authRole the request was sent with, so the
+      // redirect matches which login the request actually belonged to —
+      // falling back to URL sniffing only if authRole wasn't set.
+      const role = err.config?.authRole || (isAdminRoute(err.config?.url) ? 'admin' : 'seller');
+      if (role === 'admin') {
         localStorage.removeItem('lens_admin_token');
         window.location.href = '/admin/login';
       } else {

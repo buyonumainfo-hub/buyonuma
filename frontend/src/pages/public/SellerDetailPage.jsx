@@ -108,31 +108,32 @@ const SellerDetailPage = () => {
       <Navbar />
       <div className="seller-detail">
 
-        {/* Banner — overlay uses pointer-events:none so clicks reach the button */}
-        <div className="seller-detail-banner">
-          {seller.banner ? (
-            <>
-              <OptimizedImage src={seller.banner} alt={seller.store_name} width={1200} height={280} priority />
-              {/* Overlay is purely visual, non-blocking */}
-              <div className="seller-detail-banner-overlay" style={{ pointerEvents: 'none' }} />
-              {/* Click trigger sits on top of everything */}
-              <button
-                className="banner-lightbox-trigger"
-                onClick={() => openLightbox(seller.banner, seller.store_name)}
-                aria-label="View banner image"
-              >
-                <span className="image-zoom-hint">
-                  <ZoomIn size={18} />
-                  View
-                </span>
-              </button>
-            </>
-          ) : (
-            <div className="seller-detail-banner-placeholder">
-              <span>{CATEGORY_ICONS[seller.category] || '🏪'}</span>
-            </div>
-          )}
-        </div>
+       
+               {/* Banner — overlay uses pointer-events:none so clicks reach the button */}
+               <div className="seller-detail-banner">
+                 {seller.banner ? (
+                   <>
+                     <img src={seller.banner} alt={seller.store_name} />
+                     {/* Overlay is purely visual, non-blocking */}
+                     <div className="seller-detail-banner-overlay" style={{ pointerEvents: 'none' }} />
+                     {/* Click trigger sits on top of everything */}
+                     <button
+                       className="banner-lightbox-trigger"
+                       onClick={() => openLightbox(seller.banner, seller.store_name)}
+                       aria-label="View banner image"
+                     >
+                       <span className="image-zoom-hint">
+                         <ZoomIn size={18} />
+                         View
+                       </span>
+                     </button>
+                   </>
+                 ) : (
+                   <div className="seller-detail-banner-placeholder">
+                     <span>{CATEGORY_ICONS[seller.category] || '🏪'}</span>
+                   </div>
+                 )}
+               </div>
 
         {/* Profile section */}
         <div className="container">
@@ -177,7 +178,7 @@ const SellerDetailPage = () => {
                   {seller.city ? `${seller.city}, ${seller.state}` : seller.state}
                 </p>
               )}
-              {seller.description && <p className="seller-detail-desc">{seller.description}</p>}
+              {seller.description && <p className="seller-detail-desc">{seller.description} </p>}
             </div>
 
             <div className="seller-detail-contacts">
