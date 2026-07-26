@@ -8,8 +8,15 @@ import { writeLimiter } from '../middleware/rateLimiter.js';
 import { productCreateValidators, productUpdateValidators, mongoIdParam, locationQuery } from '../middleware/validators.js';
 import { validate } from '../middleware/validate.js';
 import { logActivity } from '../utils/activityLog.js';
+import { WORLDWIDE } from '../utils/nigeriaLocations.js';
 
 const router = express.Router();
+
+// Escapes regex metacharacters before interpolating a user-controllable
+// value (city query param) into a MongoDB $regex filter — without this,
+// a value like "Offa)" or "a.*b" could throw or match far more broadly
+// than intended. Cheap, defensive insurance.
+const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Mark expired products inactive (run before public queries)
 const cleanExpired = async () => {
@@ -26,295 +33,16 @@ const activateAll = async () => {
 };
 
 // ─── GET /api/products — public ─────────────────────────────────────────────
-// router.get('/', async (req, res) => {
-//   try {
-//     await cleanExpired();
-
-//     const {
-//       page=1, limit=12, sort='createdAt', order='desc',
-//       category, search, seller, minPrice, maxPrice
-//     } = req.query;
-
-//     const cacheKey = `products:list:${JSON.stringify(req.query)}`;
-//     const cached   =await cache.get(cacheKey);
-//     //console.log(cached)
-//     if (cached) return res.json(cached);
-
-//     // Only show products that belong to sellers with an active token
-//     const now = new Date();
-//     const activeSellers = await Seller.find({
-//       isApproved: true,
-//       isActive:   true,
-//       token_expires_at: { $gt: now },  // seller's token must be valid
-//     }).select('_id');
-
-//     const activeSellersIds = activeSellers.map(s => s._id);
-
-//     const query = {
-//       isActive: true,
-//       seller:   { $in: activeSellersIds },
-//     };
-
-//     if (category && category !== 'All') query.category = category;
-//     if (seller) {
-//       // If filtering by specific seller, still require active token
-//       query.seller = activeSellersIds.includes(seller) ? seller : { $in: [] };
-//     }
-//     if (minPrice || maxPrice) {
-//       query.price = {};
-//       if (minPrice) query.price.$gte = parseFloat(minPrice);
-//       if (maxPrice) query.price.$lte = parseFloat(maxPrice);
-//     }
-//     if (search) query.$or = [
-//       { name:        { $regex: search, $options: 'i' } },
-//       { description: { $regex: search, $options: 'i' } },
-//     ];
-
-//     const sortObj = sort === 'rating' ? {} : { [sort]: order === 'asc' ? 1 : -1 };
-//     const total   = await Product.countDocuments(query);
-//     let products  = await Product.find(query)
-//       .populate('seller', 'store_name username profile_picture rating category whatsapp')
-//       .sort(sortObj)
-//       .skip((page - 1) * limit)
-//       .limit(parseInt(limit));
-
-//     if (sort === 'rating') {
-//       products = products.sort((a, b) =>
-//         order === 'asc'
-//           ? (a.seller?.rating || 0) - (b.seller?.rating || 0)
-//           : (b.seller?.rating || 0) - (a.seller?.rating || 0)
-//       );
-//     }
-
-//     const result = {
-//       success: true, products,
-//       pagination: { total, page: parseInt(page), pages: Math.ceil(total / limit), limit: parseInt(limit) }
-//     };
-
-//   await cache.set(cacheKey, result, 30); // cache public product list for 30 s
-//     res.json(result);
-//   } catch (err) {
-//     res.status(500).json({ success: false, message: err.message });
-//   }
-// });
-
-
-// ─── GET /api/products — public (TikTok Smart Mix with sort options) ────────
-
-// router.get('/', async (req, res) => {
-//   try {
-//     await cleanExpired();
-
-//     const {
-//       page = 1, limit = 12,
-//       sort = 'tiktokScore',
-//       order = 'desc',
-//       category, search, seller, minPrice, maxPrice
-//     } = req.query;
-
-//     const cacheKey = `products:list:${JSON.stringify(req.query)}`;
-//     const cached = await cache.get(cacheKey);
-//     if (cached) return res.json(cached);
-
-//     const now = new Date();
-//     const activeSellers = await Seller.find({
-//       isApproved: true,
-//       isActive: true,
-//       token_expires_at: { $gt: now },
-//     }).select('_id rating store_name username profile_picture category whatsapp');
-
-//     const activeSellersIds = activeSellers.map(s => s._id);
-//     const sellerMap = new Map();
-//     activeSellers.forEach(s => {
-//       sellerMap.set(s._id.toString(), s);
-//     });
-
-//     const query = {
-//       isActive: true,
-//       seller: { $in: activeSellersIds },
-//     };
-
-//     if (category && category !== 'All') query.category = category;
-//     if (seller) {
-//       // FIX: activeSellersIds is an array of ObjectIds, use .toString() comparison
-//       const isActive = activeSellersIds.some(id => id.toString() === seller);
-//       query.seller = isActive ? seller : { $in: [] };
-//     }
-//     if (minPrice || maxPrice) {
-//       query.price = {};
-//       if (minPrice) query.price.$gte = parseFloat(minPrice);
-//       if (maxPrice) query.price.$lte = parseFloat(maxPrice);
-//     }
-//     if (search) query.$or = [
-//       { name: { $regex: search, $options: 'i' } },
-//       { description: { $regex: search, $options: 'i' } },
-//     ];
-
-//     const total = await Product.countDocuments(query);
-//     const limitNum = parseInt(limit);
-//     const pageNum = parseInt(page);
-
-//     let products = [];
-
-//     if (sort === 'tiktokScore') {
-//       // FIX: Fetch a larger pool of products and paginate from it,
-//       // instead of running 3 separate paginated queries that cause duplicates.
-//       const POOL_SIZE = 200; // Fetch enough to cover multiple pages
-
-//       const newCount = Math.floor(limitNum * 0.4);
-//       const highRatedCount = Math.floor(limitNum * 0.4);
-//       const randomCount = limitNum - newCount - highRatedCount;
-
-//       const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-//       const highRatedSellerIds = activeSellers
-//         .filter(s => (s.rating || 0) >= 4)
-//         .map(s => s._id);
-
-//       // 1. Fetch new products pool (no per-page skip here)
-//       let newProducts = [];
-//       if (newCount > 0) {
-//         newProducts = await Product.find({ ...query, createdAt: { $gte: oneWeekAgo } })
-//           .sort({ createdAt: -1 })
-//           .limit(Math.ceil(POOL_SIZE * 0.4))
-//           .lean();
-//       }
-
-//       // 2. Fetch high-rated seller products pool (exclude already fetched)
-//       let highRatedProducts = [];
-//       if (highRatedCount > 0 && highRatedSellerIds.length > 0) {
-//         const existingIds = newProducts.map(p => p._id);
-//         highRatedProducts = await Product.find({
-//           ...query,
-//           seller: { $in: highRatedSellerIds },
-//           _id: { $nin: existingIds }
-//         })
-//           .sort({ createdAt: -1 })
-//           .limit(Math.ceil(POOL_SIZE * 0.4))
-//           .lean();
-//       }
-
-//       // 3. Fetch random products pool (exclude already fetched)
-//       let randomProducts = [];
-//       if (randomCount > 0) {
-//         const existingIds = [
-//           ...newProducts.map(p => p._id),
-//           ...highRatedProducts.map(p => p._id)
-//         ];
-//         randomProducts = await Product.aggregate([
-//           { $match: { ...query, _id: { $nin: existingIds } } },
-//           { $sample: { size: Math.ceil(POOL_SIZE * 0.2) } }
-//         ]);
-//       }
-
-//       // Interleave all three pools
-//       let interleaved = [];
-//       const maxLen = Math.max(newProducts.length, highRatedProducts.length, randomProducts.length);
-//       for (let i = 0; i < maxLen; i++) {
-//         if (newProducts[i]) interleaved.push(newProducts[i]);
-//         if (highRatedProducts[i]) interleaved.push(highRatedProducts[i]);
-//         if (randomProducts[i]) interleaved.push(randomProducts[i]);
-//       }
-
-//       // FIX: Deduplicate by _id before shuffling
-//       const seen = new Set();
-//       interleaved = interleaved.filter(p => {
-//         const id = p._id.toString();
-//         if (seen.has(id)) return false;
-//         seen.add(id);
-//         return true;
-//       });
-
-//       // Deterministic shuffle using a fixed seed (not page-dependent for the pool,
-//       // so that page 2 is a slice of the same shuffled pool, not a re-shuffle)
-//       const shuffled = deterministicShuffle(interleaved, 42);
-
-//       // FIX: Paginate by slicing the shuffled pool
-//       const skip = (pageNum - 1) * limitNum;
-//       products = shuffled.slice(skip, skip + limitNum);
-
-//     } else {
-//       if (sort === 'rating') {
-//         products = await Product.aggregate([
-//           { $match: query },
-//           {
-//             $lookup: {
-//               from: 'sellers',
-//               localField: 'seller',
-//               foreignField: '_id',
-//               as: 'sellerData'
-//             }
-//           },
-//           { $unwind: '$sellerData' },
-//           { $sort: { 'sellerData.rating': order === 'asc' ? 1 : -1 } },
-//           { $skip: (pageNum - 1) * limitNum },
-//           { $limit: limitNum },
-//           { $project: { sellerData: 0 } }
-//         ]);
-//       } else {
-//         const sortObj = {};
-//         sortObj[sort] = order === 'asc' ? 1 : -1;
-
-//         products = await Product.find(query)
-//           .sort(sortObj)
-//           .skip((pageNum - 1) * limitNum)
-//           .limit(limitNum)
-//           .lean();
-//       }
-//     }
-
-//     // Attach seller data
-//     const productsWithSellers = products.map(product => ({
-//       ...product,
-//       seller: sellerMap.get(product.seller.toString())
-//     }));
-
-//     const result = {
-//       success: true,
-//       products: productsWithSellers,
-//       pagination: {
-//         total,
-//         page: pageNum,
-//         pages: Math.ceil(total / limitNum),
-//         limit: limitNum
-//       }
-//     };
-
-//     await cache.set(cacheKey, result, 30);
-//     res.json(result);
-//   } catch (err) {
-//     res.status(500).json({ success: false, message: err.message });
-//   }
-// });
-
-// // Helper function for deterministic shuffling
-// function deterministicShuffle(array, seed) {
-//   const shuffled = [...array];
-//   let currentIndex = shuffled.length;
-
-//   while (currentIndex !== 0) {
-//     const x = Math.sin(seed + currentIndex) * 10000;
-//     const random = Math.floor((x - Math.floor(x)) * currentIndex);
-//     currentIndex--;
-//     [shuffled[currentIndex], shuffled[random]] = [shuffled[random], shuffled[currentIndex]];
-//   }
-
-//   return shuffled;
-// }
-
-
-
-
 // new
 
-router.get('/', async (req, res) => {
+router.get('/', locationQuery, validate, async (req, res) => {
 try {
-   const tokenRequired = await isTokenRequired();
+const tokenRequired = await isTokenRequired();
    if (tokenRequired) {
     await cleanExpired();
    }else{
      await activateAll();
    }
-
 
 const {
 page = 1, limit = 12,
@@ -342,10 +70,21 @@ const now = new Date();
     // for sort=nearest we instead keep the full pool and re-rank below so
     // we can show closest-first with graceful fallback to "everywhere else"
     // rather than an empty page when nobody's in the exact city/state.
-   if (sort !== 'nearest') {
-  if (state && state !== 'All') sellerFilter.state = { $regex: `^${state}$`, $options: 'i' };
-  if (city) sellerFilter.city = { $regex: `^${city}$`, $options: 'i' };
-}
+    //
+    // Sellers who registered with state="Worldwide" (they ship/sell
+    // everywhere rather than being tied to one location) are always
+    // included alongside whatever specific state/city the buyer filtered
+    // to — they shouldn't be excluded just because they're not physically
+    // located there. Only applied when a location filter is actually set;
+    // with no filter, worldwide sellers already show normally like anyone
+    // else.
+    if (sort !== 'nearest') {
+      if (state && state !== 'All') {
+        const locationMatch = { state };
+        if (city) locationMatch.city = { $regex: `^${escapeRegex(city)}$`, $options: 'i' };
+        sellerFilter.$or = [locationMatch, { state: WORLDWIDE }];
+      }
+    }
 const activeSellers = await Seller.find(sellerFilter).select('_id rating store_name username profile_picture category whatsapp contact ninStatus state city');
 
 const activeSellersIds = activeSellers.map(s => s._id);
@@ -374,50 +113,142 @@ if (search) query.$or = [
 { description: { $regex: search, $options: 'i' } },
 ];
 
-const total = await Product.countDocuments(query);
+let total = await Product.countDocuments(query);
 const limitNum = parseInt(limit);
 const pageNum = parseInt(page);
 
 let products = [];
+let nearestTotal = null; // overridden below for sort=nearest, since that mode uses a capped candidate pool rather than the full unbounded count
+
 if (sort === 'nearest') {
   if (!state) {
     return res.status(400).json({ success: false, message: 'state is required for sort=nearest' });
   }
+  // Bucket by proximity: same city first, then same state, then everyone
+  // else — each bucket newest-first. Fetched as a bounded pool (not the
+  // full collection) to keep this cheap even on a large catalog.
+  const POOL_SIZE = 300;
 
-  const stateRegex = { $regex: `^${state}$`, $options: 'i' };
+  // BUG FIX: `city` matching already normalized case (`.toLowerCase()`),
+  // but `state` matching used strict `===` with no trim/case handling —
+  // an inconsistency. Both sides *should* always come from the same
+  // canonical NIGERIA_STATES list, but if a seller's `state` was ever
+  // set any other way (a direct DB edit, an older data import, a future
+  // code path that doesn't enforce the canonical list, incidental
+  // whitespace), a silent case/whitespace mismatch here would dump that
+  // seller into "elsewhere" instead of matching them — which looks
+  // exactly like "nearest isn't doing anything" from a buyer's side.
+  // Normalizing both sides the same way closes that gap.
+  const normalize = (v) => (v || '').trim().toLowerCase();
+  const targetState = normalize(state);
+  const targetCity = normalize(city);
 
-  const citySellerQuery = city
-    ? { ...sellerFilter, state: stateRegex, city: { $regex: `^${city}$`, $options: 'i' } }
-    : null;
-  const stateSellerQuery = { ...sellerFilter, state: stateRegex };
+  const cityIds = targetCity
+    ? new Set(activeSellers.filter(s => normalize(s.state) === targetState && normalize(s.city) === targetCity).map(s => s._id.toString()))
+    : new Set();
+  const stateIds = new Set(activeSellers.filter(s => normalize(s.state) === targetState && !cityIds.has(s._id.toString())).map(s => s._id.toString()));
 
-  const [citySellers, stateSellersRaw] = await Promise.all([
-    citySellerQuery ? Seller.find(citySellerQuery).select('_id').lean() : Promise.resolve([]),
-    Seller.find(stateSellerQuery).select('_id').lean(),
-  ]);
-
-  const cityIds = new Set(citySellers.map((s) => s._id.toString()));
-  const stateOnlyIds = new Set(
-    stateSellersRaw.map((s) => s._id.toString()).filter((id) => !cityIds.has(id))
+  // Sellers who registered as "Worldwide" ship/sell everywhere, so they're
+  // more relevant to any buyer than a random seller who just happens to be
+  // in some other, unrelated state — ranked as their own bucket, above
+  // "elsewhere" but below an actual city/state match.
+  const worldwideIds = new Set(
+    activeSellers
+      .filter(s => s.state === WORLDWIDE && !cityIds.has(s._id.toString()) && !stateIds.has(s._id.toString()))
+      .map(s => s._id.toString())
   );
 
-  const POOL_SIZE = 300;
-  const [cityPool, statePool, elsewherePool] = await Promise.all([
-    cityIds.size
-      ? Product.find({ ...query, seller: { $in: [...cityIds] } }).sort({ createdAt: -1 }).limit(POOL_SIZE).lean()
-      : Promise.resolve([]),
-    stateOnlyIds.size
-      ? Product.find({ ...query, seller: { $in: [...stateOnlyIds] } }).sort({ createdAt: -1 }).limit(POOL_SIZE).lean()
-      : Promise.resolve([]),
-    (cityIds.size || stateOnlyIds.size)
-      ? Product.find({ ...query, seller: { $nin: [...cityIds, ...stateOnlyIds] } }).sort({ createdAt: -1 }).limit(POOL_SIZE).lean()
-      : Product.find(query).sort({ createdAt: -1 }).limit(POOL_SIZE).lean(),
+  // BUG FIX: this used to be `Product.find({ ...query, seller: { $nin: [...] } })`.
+  // Spreading `query` and then overwriting its `seller` key with `$nin`
+  // doesn't merge with the original `seller: { $in: activeSellersIds }` —
+  // the later key replaces it outright. That meant the "everyone else"
+  // bucket had NO constraint tying it back to approved/active/token-valid
+  // sellers, so it could pull in products from sellers who shouldn't be
+  // publicly visible at all (unapproved, suspended, expired token) —
+  // which looked like "nearest" was just dumping in the whole catalog
+  // indiscriminately instead of respecting normal visibility rules.
+  // Deriving the elsewhere set explicitly from `activeSellers` (already
+  // correctly scoped) fixes this.
+  const elsewhereIds = new Set(
+    activeSellers
+      .filter(s => !cityIds.has(s._id.toString()) && !stateIds.has(s._id.toString()) && !worldwideIds.has(s._id.toString()))
+      .map(s => s._id.toString())
+  );
+
+  // BUG FIX: sorting by createdAt alone has no tiebreaker for products
+  // created in the same millisecond (rare but possible), and — more
+  // importantly — each page re-runs these three queries from scratch
+  // rather than using a single stable cursor. Without a fully unique
+  // secondary sort key, MongoDB doesn't guarantee the same relative
+  // ordering across two separate query executions, so page 2's query
+  // could shuffle relative to page 1's and re-return an item already
+  // shown. `_id` is always unique, so adding it as a tiebreaker makes
+  // the sort a true total order — the exact same fix already applied
+  // to the tiktokScore branch below (see its `// FIX:` comments).
+  const [cityPool, statePool, worldwidePool, elsewherePool] = await Promise.all([
+    cityIds.size ? Product.find({ ...query, seller: { $in: [...cityIds] } }).sort({ createdAt: -1, _id: 1 }).limit(POOL_SIZE).lean() : Promise.resolve([]),
+    stateIds.size ? Product.find({ ...query, seller: { $in: [...stateIds] } }).sort({ createdAt: -1, _id: 1 }).limit(POOL_SIZE).lean() : Promise.resolve([]),
+    worldwideIds.size ? Product.find({ ...query, seller: { $in: [...worldwideIds] } }).sort({ createdAt: -1, _id: 1 }).limit(POOL_SIZE).lean() : Promise.resolve([]),
+    elsewhereIds.size ? Product.find({ ...query, seller: { $in: [...elsewhereIds] } }).sort({ createdAt: -1, _id: 1 }).limit(POOL_SIZE).lean() : Promise.resolve([]),
   ]);
 
-  const combined = [...cityPool, ...statePool, ...elsewherePool];
+  let combined = [...cityPool, ...statePool, ...worldwidePool, ...elsewherePool];
+
+  // Defense in depth: the three buckets are built to be mutually
+  // exclusive by construction, but a duplicate here would be very
+  // visible to buyers (the same product twice in their feed), so we
+  // guard against it explicitly rather than relying solely on that
+  // invariant holding — same safeguard already used in the tiktokScore
+  // branch below.
+  const seenProductIds = new Set();
+  combined = combined.filter((p) => {
+    const id = p._id.toString();
+    if (seenProductIds.has(id)) return false;
+    seenProductIds.add(id);
+    return true;
+  });
+
   const skip = (pageNum - 1) * limitNum;
   products = combined.slice(skip, skip + limitNum);
-} else if (sort === 'tiktokScore') {
+
+  // BUG FIX: `total` above counts the FULL unbounded catalog across all
+  // active sellers, but each of the three pools here is capped at
+  // POOL_SIZE (300) — once a growing catalog has more than 300 products
+  // in any one bucket (almost always "elsewhere", the biggest bucket),
+  // `total`/`pages` would overstate how many pages actually exist. The
+  // frontend's infinite scroll trusts `pages` to decide whether to keep
+  // requesting more, so that mismatch meant it kept firing requests for
+  // pages that could never be delivered — looking like it "just keeps
+  // fetching" and never settles. Reporting the actual capped-pool size
+  // here keeps pagination honest for this sort mode specifically.
+  nearestTotal = combined.length;
+
+  // Diagnostics — only computed/returned for sort=nearest, cheap (just
+  // counting sets we already built), and genuinely useful for telling
+  // "nearest is sorting correctly but there's simply nobody nearby yet"
+  // apart from "nearest is broken". Check this in the network tab if
+  // proximity sorting still looks wrong after this fix: if
+  // sellersWithLocationSet is much lower than totalActiveSellers, most
+  // sellers haven't set a state/city on their profile yet, which isn't
+  // a code bug — there's nothing to bucket them into.
+  req._nearestDebug = {
+    requestedState: state,
+    requestedCity: city || null,
+    totalActiveSellers: activeSellers.length,
+    sellersWithLocationSet: activeSellers.filter(s => s.state).length,
+    worldwideSellers: activeSellers.filter(s => s.state === WORLDWIDE).length,
+    cityBucketSellers: cityIds.size,
+    stateBucketSellers: stateIds.size,
+    worldwideBucketSellers: worldwideIds.size,
+    elsewhereBucketSellers: elsewhereIds.size,
+    cityBucketProducts: cityPool.length,
+    stateBucketProducts: statePool.length,
+    worldwideBucketProducts: worldwidePool.length,
+    elsewhereBucketProducts: elsewherePool.length,
+  };
+} else
+
+if (sort === 'tiktokScore') {
 // Per-page ratios: 40% new, 40% high-rated seller, 20% random
 const newCount = Math.round(limitNum * 0.4);
 const highRatedCount = Math.round(limitNum * 0.4);
@@ -543,6 +374,12 @@ const productsWithSellers = products.map(product => ({
 seller: sellerMap.get(product.seller.toString())
 }));
 
+// For sort=nearest, pagination must reflect the capped candidate pool
+// (see the BUG FIX comment above) rather than the unbounded catalog
+// count, or infinite scroll will keep requesting pages that can never
+// be delivered.
+if (nearestTotal !== null) total = nearestTotal;
+
 const result = {
 success: true,
 products: productsWithSellers,
@@ -551,7 +388,8 @@ total,
 page: pageNum,
 pages: Math.ceil(total / limitNum),
 limit: limitNum
-}
+},
+...(req._nearestDebug ? { _nearestDebug: req._nearestDebug } : {}),
 };
 
 await cache.set(cacheKey, result, 30);

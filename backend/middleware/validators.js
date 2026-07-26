@@ -1,6 +1,6 @@
 import { body, param, query } from 'express-validator';
 import mongoose from 'mongoose';
-import { NIGERIA_STATES } from '../utils/nigeriaLocations.js';
+import { NIGERIA_STATES, WORLDWIDE } from '../utils/nigeriaLocations.js';
 
 const isObjectId = (value) => {
   if (!mongoose.Types.ObjectId.isValid(value)) {
@@ -48,10 +48,15 @@ export const sellerRegisterValidators = [
   body('website').optional({ checkFalsy: true }).isURL().withMessage('Website must be a valid URL'),
   body('social_media_handle').optional().isLength({ max: 100 }),
   body('nin').optional().isLength({ min: 11, max: 11 }).withMessage('NIN must be exactly 11 digits').isNumeric(),
-  body('state').trim().notEmpty().withMessage('State is required')
-    .isIn(NIGERIA_STATES).withMessage('Please select a valid Nigerian state'),
-  body('city').optional()
-    .isLength({ min: 2, max: 80 }).withMessage('City/town must be 2-80 characters'),
+  body('state').optional().isLength({ max: 20 }),
+  // City isn't required for a seller who selected "Worldwide" — they
+  // ship/sell everywhere rather than being tied to one town.
+  body('city').trim().custom((value, { req }) => {
+    if (req.body.state === WORLDWIDE) return true;
+    if (!value || value.length < 2) throw new Error('City/town is required');
+    if (value.length > 80) throw new Error('City/town must be 2-80 characters');
+    return true;
+  }),
 ];
 
 export const sellerLoginValidators = [
@@ -108,6 +113,7 @@ export const sellerApproveValidators = [
 // ── NIN verification ─────────────────────────────────────────────────────
 export const ninSubmitValidators = [
   body('nin').trim().isLength({ min: 11, max: 11 }).withMessage('NIN must be exactly 11 digits').isNumeric(),
+  body('selfieUrl').trim().isURL().withMessage('A selfie photo is required for face verification'),
 ];
 
 export const ninReviewValidators = [

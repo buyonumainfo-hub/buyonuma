@@ -66,6 +66,18 @@ const isPlainObject = (value) =>
 // this app will be nowhere near this deep.
 const MAX_DEPTH = 20;
 
+// Hard ceiling on breadth (keys per object / items per array) at any
+// single level. MAX_DEPTH alone only stops maliciously *nested* payloads
+// — it does nothing for a flat payload with an enormous number of keys
+// or a huge array (e.g. {"a0":"x","a1":"x",...} x 500,000, or a
+// multi-million-element array). Without this, Object.keys()/.map() will
+// try to synchronously walk the whole thing on every request, which is
+// exactly the kind of unbounded work that OOMs or hard-times-out a
+// serverless function (a process kill, not a catchable error — same
+// failure class the Buffer guard above exists to prevent). Tune this to
+// comfortably fit your largest legitimate payload.
+const MAX_KEYS = 1000;
+
 const clean = (value, depth = 0) => {
   if (depth > MAX_DEPTH) return value;
 
@@ -77,11 +89,18 @@ const clean = (value, depth = 0) => {
     return decodeEntities(stripped);
   }
   if (Array.isArray(value)) {
+    if (value.length > MAX_KEYS) {
+      throw new Error(`Payload array exceeds maximum allowed length (${MAX_KEYS})`);
+    }
     return value.map((item) => clean(item, depth + 1));
   }
   if (isPlainObject(value)) {
+    const keys = Object.keys(value);
+    if (keys.length > MAX_KEYS) {
+      throw new Error(`Payload object exceeds maximum allowed keys (${MAX_KEYS})`);
+    }
     const out = {};
-    for (const key of Object.keys(value)) {
+    for (const key of keys) {
       if (DANGEROUS_KEYS.has(key)) continue;
       out[key] = clean(value[key], depth + 1);
     }
@@ -98,7 +117,11 @@ export const sanitizeInput = (req, res, next) => {
     }
     // req.query is read-only getter in newer Express — mutate in place instead
     if (req.query && typeof req.query === 'object') {
-      for (const key of Object.keys(req.query)) {
+      const queryKeys = Object.keys(req.query);
+      if (queryKeys.length > MAX_KEYS) {
+        throw new Error(`Query string exceeds maximum allowed keys (${MAX_KEYS})`);
+      }
+      for (const key of queryKeys) {
         if (DANGEROUS_KEYS.has(key)) {
           delete req.query[key];
           continue;
@@ -123,11 +146,18 @@ const stripOperators = (value, depth = 0) => {
   if (depth > MAX_DEPTH) return value;
 
   if (Array.isArray(value)) {
+    if (value.length > MAX_KEYS) {
+      throw new Error(`Payload array exceeds maximum allowed length (${MAX_KEYS})`);
+    }
     return value.map((item) => stripOperators(item, depth + 1));
   }
   if (isPlainObject(value)) {
+    const keys = Object.keys(value);
+    if (keys.length > MAX_KEYS) {
+      throw new Error(`Payload object exceeds maximum allowed keys (${MAX_KEYS})`);
+    }
     const out = {};
-    for (const key of Object.keys(value)) {
+    for (const key of keys) {
       if (key.startsWith('$') || key.includes('.') || DANGEROUS_KEYS.has(key)) {
         continue;
       }

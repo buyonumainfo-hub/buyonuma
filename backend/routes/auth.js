@@ -6,6 +6,7 @@ import { authLimiter } from '../middleware/rateLimiter.js';
 import { adminLoginValidators, adminChangePasswordValidators } from '../middleware/validators.js';
 import { validate } from '../middleware/validate.js';
 import { logActivity } from '../utils/activityLog.js';
+import { connectToDatabase } from '../lib/mongodb.js';
 
 const router = express.Router();
 
@@ -14,14 +15,34 @@ const router = express.Router();
 // this previously silently created "admin / admin123" if env vars were unset.
 const initAdmin = async () => {
   try {
+    // BUG FIX: this runs at module import time — before any request has
+    // come in, and therefore before the ensureDbConnected middleware in
+    // index.js has ever run. It used to work anyway because Mongoose
+    // buffers commands by default (queueing a query until a connection
+    // becomes available), but lib/mongodb.js's cached connector sets
+    // `bufferCommands: false` (deliberately — buffering hides connection
+    // problems instead of surfacing them). So this needs to explicitly
+    // wait for a ready connection itself rather than relying on that
+    // implicit behavior.
+    await connectToDatabase();
+
     const count = await Admin.countDocuments();
     if (count === 0) {
       const username = process.env.ADMIN_USERNAME || 'admin';
       const password = process.env.ADMIN_PASSWORD;
       if (!password) {
         if (process.env.NODE_ENV === 'production') {
-          console.error('❌ FATAL: ADMIN_PASSWORD env var is required in production to create the initial admin account.');
-          process.exit(1);
+          // BUG FIX: this used to call process.exit(1) directly here.
+          // Since initAdmin() runs at import time, that would kill the
+          // ENTIRE serverless function — not just admin creation — on
+          // every single cold start until ADMIN_PASSWORD is set, taking
+          // the whole API down rather than just leaving "no admin
+          // account exists yet" unresolved. Logging clearly and skipping
+          // admin creation is a much safer failure mode: every other
+          // route keeps working, and admin login simply won't succeed
+          // until the env var is set and a fresh cold start runs this again.
+          console.error('❌ ADMIN_PASSWORD env var is required in production to create the initial admin account. Skipping admin creation — set ADMIN_PASSWORD and redeploy.');
+          return;
         }
         console.warn('⚠️ ADMIN_PASSWORD not set — using dev-only default "admin123". DO NOT use this in production.');
       }

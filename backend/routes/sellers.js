@@ -68,7 +68,10 @@ router.get('/', locationQuery, validate, async (req, res) => {
     if (minRating) query.rating = { $gte: parseFloat(minRating) };
     // Location filters — used both for an explicit "browse this state/city"
     // filter and for the "nearest" sort mode below.
-    if (state && state !== 'All') query.state = state;
+    // "Worldwide" sellers aren't tied to any one state, so they're pulled in
+    // alongside an exact state match rather than only showing when state
+    // is left unset.
+    if (state && state !== 'All') query.state = { $in: [state, 'Worldwide'] };
     if (city) query.city = { $regex: `^${city}$`, $options: 'i' };
     if (search) query.$or = [
       { store_name:  { $regex: search, $options: 'i' } },
@@ -84,9 +87,10 @@ router.get('/', locationQuery, validate, async (req, res) => {
 
     if (sort === 'nearest') {
       // Location-based sort: sellers in the buyer's exact city first, then
-      // same state, then everyone else — each bucket sorted by rating so
-      // the ordering still feels meaningful within a bucket. Requires
-      // ?state=...&city=... (typically the buyer's auto-detected location).
+      // same state (plus Worldwide sellers, who ship anywhere), then
+      // everyone else — each bucket sorted by rating so the ordering still
+      // feels meaningful within a bucket. Requires ?state=...&city=...
+      // (typically the buyer's auto-detected location).
       if (!state) {
         return res.status(400).json({ success: false, message: 'state is required for sort=nearest' });
       }
@@ -95,7 +99,7 @@ router.get('/', locationQuery, validate, async (req, res) => {
       delete baseQuery.city;
 
       const cityQuery = city ? { ...baseQuery, state, city: { $regex: `^${city}$`, $options: 'i' } } : null;
-      const stateQuery = { ...baseQuery, state };
+      const stateQuery = { ...baseQuery, state: { $in: [state, 'Worldwide'] } };
 
       const [cityMatches, stateMatchesRaw] = await Promise.all([
         cityQuery ? Seller.find(cityQuery).select('-password').sort({ rating: -1 }).lean() : Promise.resolve([]),
@@ -294,7 +298,7 @@ router.get('/:id', mongoIdParam('id'), validate, async (req, res) => {
 
 // ─── GET /api/sellers/:username — public ──────────────────────────────────────────
 router.get('/user/:username', async (req, res) => {
- // console.log(req.params.username)
+  console.log(req.params.username)
   try {
     const cacheKey = `seller:${req.params.username}`;
     const cached   =await cache.get(cacheKey);
@@ -313,7 +317,7 @@ router.get('/user/:username', async (req, res) => {
       ? await Product.find({
           seller: seller._id,
           isActive: true,
-          $or: [{ expires_at: null }, { expires_at: { $gt: now } }],
+         // $or: [{ expires_at: null }, { expires_at: { $gt: now } }],
         }).populate('seller', 'store_name username profile_picture rating category contact website social_media_handle whatsapp token_expires_at')
       : [];
 
@@ -324,7 +328,7 @@ router.get('/user/:username', async (req, res) => {
 });
 
 // ─── POST /api/sellers — admin creates seller ────────────────────────────────
-router.post('/', protect, writeLimiter, async (req, res) => {
+router.post('/admin/', protect, writeLimiter, async (req, res) => {
   try {
     const data = { ...req.body };
     data.isApproved = true;
@@ -342,7 +346,7 @@ router.post('/', protect, writeLimiter, async (req, res) => {
 });
 
 // ─── PUT /api/sellers/:id — admin updates seller ─────────────────────────────
-router.put('/:id', protect, writeLimiter, mongoIdParam('id'), validate, async (req, res) => {
+router.put('/admin/:id', protect, writeLimiter, mongoIdParam('id'), validate, async (req, res) => {
   try {
     const data = { ...req.body };
     delete data.password;
@@ -356,7 +360,7 @@ router.put('/:id', protect, writeLimiter, mongoIdParam('id'), validate, async (r
 });
 
 // ─── PATCH /api/sellers/:id/approve — admin approve/suspend ─────────────────
-router.patch('/:id/approve', protect, writeLimiter, mongoIdParam('id'), sellerApproveValidators, validate, async (req, res) => {
+router.patch('/admin/:id/approve',protect, writeLimiter, mongoIdParam('id'), sellerApproveValidators, validate, async (req, res) => {
   try {
     const { isApproved } = req.body;
     const seller = await Seller.findByIdAndUpdate(req.params.id, { isApproved }, { new: true }).select('-password');
@@ -383,7 +387,7 @@ router.patch('/:id/approve', protect, writeLimiter, mongoIdParam('id'), sellerAp
 });
 
 // ─── DELETE /api/sellers/:id ─────────────────────────────────────────────────
-router.delete('/:id', protect, writeLimiter, mongoIdParam('id'), validate, async (req, res) => {
+router.delete('/admin/:id', protect, writeLimiter, mongoIdParam('id'), validate, async (req, res) => {
   try {
     const seller = await Seller.findByIdAndDelete(req.params.id);
     if (!seller) return res.status(404).json({ success: false, message: 'Seller not found' });

@@ -7,6 +7,7 @@
  * Kept as a plain JS object (not a DB collection) since this data is
  * static and small — no need for a network round trip to look it up.
  */
+export const WORLDWIDE = 'Worldwide';
 export const NIGERIA_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
   "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu",

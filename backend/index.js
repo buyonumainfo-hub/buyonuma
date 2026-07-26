@@ -2,7 +2,6 @@ import './loadEnv.js'; // MUST be the first import — see loadEnv.js for why
 
 import express from 'express';
 import cors from 'cors';
-import mongoose from 'mongoose';
 import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
@@ -24,7 +23,8 @@ import metaRoutes         from './routes/meta.js';
 import contactRoutes      from './routes/contact.js';
 
 import { generalLimiter } from './middleware/rateLimiter.js';
-//import { sanitizeInput, preventNoSQLInjection } from './middleware/sanitize.js';
+import { sanitizeInput, preventNoSQLInjection } from './middleware/sanitize.js';
+import { connectToDatabase, ensureDbConnected } from './lib/mongodb.js';
 
 const app = express();
 
@@ -62,7 +62,6 @@ app.use(cors({
 if (allowedOrigins.length === 0 && process.env.NODE_ENV === 'production') {
   console.warn('⚠️ CORS_ORIGINS is not set in production — CORS is currently open to all origins. Set CORS_ORIGINS to a comma-separated list of your frontend URL(s).');
 }
-//app.use(cors())
 
 // ── Compression + logging ───────────────────────────────────────────────
 app.use(compression());
@@ -76,12 +75,27 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Order matters: sanitize HTML/XSS first, then strip Mongo operator
 // injection, then hpp guards against HTTP parameter pollution
 // (?category=A&category=B tricks on array-unaware handlers).
-//app.use(sanitizeInput);
-//app.use(preventNoSQLInjection);
+app.use(sanitizeInput);
+app.use(preventNoSQLInjection);
 app.use(hpp());
 
 // ── General rate limiting (per-route limiters layer on top of this) ─────
 app.use('/api/', generalLimiter);
+
+// ── Routes that must NOT depend on the database ──────────────────────────
+// Registered before the DB-connection middleware below, so they're
+// reachable (and stay fast/cheap to poll) even if MongoDB is briefly
+// unreachable — useful for load balancer health checks across the 3
+// load-balanced instances.
+app.get('/', (_, res) => res.json({ status: 'ok', message: 'buy on uma api running' }));
+app.get('/api/health', (_, res) => res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date() }));
+
+// ── Ensure a ready, cached DB connection before any route that needs one ──
+// See lib/mongodb.js for why this is cached rather than reconnecting on
+// every request — this middleware just makes sure that cached connection
+// (fresh or reused) is ready before proceeding, and returns a clean 503
+// instead of letting a route crash if the database is genuinely unreachable.
+app.use(ensureDbConnected);
 
 // ── Routes ────────────────────────────────────────────────────────────────
 app.use('/api/auth',          authRoutes);
@@ -98,13 +112,6 @@ app.use('/api/ai-chat',       aiChatRoutes);
 app.use('/api/monitoring',    monitoringRoutes);
 app.use('/api/meta',          metaRoutes);
 app.use('/api/contact',       contactRoutes);
-
-app.get('/', (_, res) => res.json({ status: 'ok', message: 'buy on uma api running' }));
-
-// Lightweight health check for load balancer / uptime monitoring —
-// deliberately does NOT touch the database so it stays fast and cheap
-// to poll frequently from 3 load-balanced instances.
-app.get('/api/health', (_, res) => res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date() }));
 
 // ── 404 handler ──────────────────────────────────────────────────────────
 app.use((req, res) => {
@@ -125,14 +132,38 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: 'Something went wrong. Please try again.' });
 });
 
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('✅ Connected to MongoDB');
-    app.listen(process.env.PORT || 5000, () =>
-      console.log(`🚀 Server running on port ${process.env.PORT || 5000}`)
-    );
-  })
-  .catch(err => { console.error('❌ MongoDB error:', err); });
+// ── Local/traditional server startup ─────────────────────────────────────
+// On Vercel, this whole block is skipped: @vercel/node wraps the exported
+// `app` directly and handles incoming requests itself — it never calls
+// app.listen(), and the DB connection is instead established lazily (and
+// cached) by the ensureDbConnected middleware above on each invocation.
+//
+// Locally (or on any traditional/long-running host), we still want the
+// familiar "connect once, then start listening" startup sequence — this
+// now goes through the SAME cached connectToDatabase() used per-request
+// above, so there's only one connection code path in the whole app, not
+// two different ones for local vs. serverless.
+//
+// BUG FIX: this previously called `process.exit(1)` directly inside the
+// Vercel-served request path (there was no guard separating "local
+// startup" from "how the app boots on Vercel"), which meant a MongoDB
+// hiccup during a cold start could kill the entire serverless function
+// invocation outright instead of returning a clean error response. Now
+// that path only exists here, guarded to local/non-Vercel environments —
+// on Vercel, a connection failure is handled per-request by
+// ensureDbConnected's try/catch instead, which returns a normal 503.
+if (!process.env.VERCEL) {
+  connectToDatabase()
+    .then(() => {
+      console.log('✅ Connected to MongoDB');
+      const port = process.env.PORT || 5000;
+      app.listen(port, () => console.log(`🚀 Server running on port ${port}`));
+    })
+    .catch((err) => {
+      console.error('❌ MongoDB connection failed at startup:', err.message);
+      process.exit(1);
+    });
+}
 
 // Surface otherwise-silent crashes instead of the process dying with no trace —
 // important on a long-running instance (not needed per-invocation on Vercel,
