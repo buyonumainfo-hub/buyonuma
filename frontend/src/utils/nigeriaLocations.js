@@ -7,6 +7,14 @@
  * Kept as a plain JS object (not a DB collection) since this data is
  * static and small — no need for a network round trip to look it up.
  */
+
+// Special, non-geographic "state" a seller can pick if they ship/serve
+// everywhere rather than being tied to one location — e.g. a seller who
+// only sells digital products, or who ships nationwide/internationally.
+// Kept as a named constant (not a magic string) so every place that needs
+// to special-case it — validators, search/filter logic — references the
+// same value instead of each hardcoding "Worldwide" separately.
+export const WORLDWIDE = 'Worldwide';
 export const NIGERIA_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
   "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu",
