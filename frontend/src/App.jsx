@@ -40,6 +40,7 @@ import SellerLogin          from './pages/seller/SellerLogin';
 import SellerRegister       from './pages/seller/SellerRegister';
 import SellerForgotPassword from './pages/seller/SellerForgotPassword';
 import SellerDashboard      from './pages/seller/SellerDashboard';
+import SellerStorePreviewPage      from './pages/seller/StorePage';
 import SellerProducts       from './pages/seller/SellerProducts';
 import SellerToken          from './pages/seller/SellerToken';
 import SellerProfile        from './pages/seller/SellerProfile';
@@ -153,6 +154,7 @@ function App() {
             <Route path="/seller/products"        element={<SellerProtected><SellerProducts /></SellerProtected>} />
             <Route path="/seller/token"           element={<SellerProtected><SellerToken /></SellerProtected>} />
             <Route path="/seller/profile"         element={<SellerProtected><SellerProfile /></SellerProtected>} />
+            <Route path="/seller/store"         element={<SellerProtected><SellerStorePreviewPage /></SellerProtected>} />
             <Route path="/seller/notifications"   element={<SellerProtected><SellerNotifications /></SellerProtected>} />
             <Route path="/seller/verification"    element={<SellerProtected><SellerVerification /></SellerProtected>} />
             <Route path="/seller/monitoring"      element={<SellerProtected><SellerMonitoring /></SellerProtected>} />

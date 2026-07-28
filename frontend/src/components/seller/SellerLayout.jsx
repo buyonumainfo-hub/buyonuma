@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, Key, User, LogOut, Menu, X, ShoppingBag, Bell, BadgeCheck, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Package, Key, User, Moon,Sun, LogOut, Menu, X, ShoppingBag, Bell, BadgeCheck, BarChart3 , Store} from 'lucide-react';
 import { useSellerAuth } from '../../context/SellerAuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import './SellerLayout.css';
@@ -9,6 +10,7 @@ import './SellerLayout.css';
 const navItems = [
   { to: '/seller/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/seller/products',  icon: Package,         label: 'My Products' },
+    { to: '/seller/store',   icon: Store,            label: 'Store' },
   { to: '/seller/monitoring',    icon: BarChart3,   label: 'Monitoring' },
   { to: '/seller/token',     icon: Key,             label: 'Redeem Token' },
   { to: '/seller/notifications', icon: Bell,        label: 'Notifications', badgeKey: 'unread' },
@@ -22,6 +24,8 @@ const SellerLayout = ({ children, title }) => {
   const navigate  = useNavigate();
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
+
+    const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     // Poll unread notification count periodically so the sidebar badge
@@ -96,6 +100,13 @@ const SellerLayout = ({ children, title }) => {
           <button className="topbar-menu-btn" onClick={() => setOpen(true)}><Menu size={20} /></button>
           <h1 className="seller-page-title">{title}</h1>
           <span className="seller-topbar-badge">Seller</span>
+            <button
+            className="theme-toggle"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+          </button>
         </header>
         <main className="seller-content">{children}</main>
       </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Key, Clock, ArrowRight, AlertCircle, CheckCircle, BarChart3 } from 'lucide-react';
+import { Package, Key, Clock, ArrowRight, AlertCircle, CheckCircle, BarChart3, Copy, Check, Eye, Store } from 'lucide-react';
 import SellerLayout from '../../components/seller/SellerLayout';
 import LoadFailedModal from '../../components/seller/LoadFailedModal';
 import { useSellerAuth } from '../../context/SellerAuthContext';
@@ -16,6 +16,7 @@ const SellerDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const fetchDashboard = useCallback(() => {
     setLoadError(false);
@@ -50,6 +51,21 @@ const SellerDashboard = () => {
     return `${h}h ${m}m left`;
   };
 
+  const storeUrl = seller?.username
+    ? `${window.location.origin}/${seller.username}`
+    : null;
+
+  const handleCopyProfile = async () => {
+    if (!storeUrl) return;
+    try {
+      await navigator.clipboard.writeText(storeUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Copy failed', err);
+    }
+  };
+
   return (
     <SellerLayout title="Dashboard">
       {loadError && <LoadFailedModal onRetry={handleRetry} retrying={retrying} />}
@@ -81,6 +97,80 @@ const SellerDashboard = () => {
           </div>
         )}
 
+        {/* Store profile / share card */}
+        {seller && (
+          <div className="dash-profile-card">
+            <div className="dash-profile-icon"><Store size={22} /></div>
+            <div className="dash-profile-info">
+              <strong>{seller.store_name}</strong>
+              <p className="dash-profile-url">{storeUrl || 'Set a username to get your store link'}</p>
+            </div>
+            <div className="dash-profile-actions">
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={handleCopyProfile}
+                disabled={!storeUrl}
+                title="Copy store link"
+              >
+                {copied ? <Check size={14} /> : <Copy size={14} />}
+                {copied ? 'Copied' : 'Copy Link'}
+              </button>
+              <a
+                href={storeUrl || '#'}
+                target="_blank"
+                rel="noreferrer"
+                className={`btn btn-gold btn-sm${!storeUrl ? ' btn-disabled' : ''}`}
+                title="View your store"
+                onClick={(e) => { if (!storeUrl) e.preventDefault(); }}
+              >
+                <Eye size={14} /> View Store
+              </a>
+            </div>
+          </div>
+        )}
+
+      
+        {/* Analytics teaser — full charts live on the Monitoring page */}
+        <Link to="/seller/monitoring" className="dash-monitoring-teaser">
+          <BarChart3 size={22} />
+          <div>
+            <h3>Store Analytics</h3>
+            <p>See your views, WhatsApp clicks, and top products with charts</p>
+          </div>
+          <ArrowRight size={16} className="quick-link-arrow" />
+        </Link>
+
+        {/* Quick links */}
+        <div className="dash-quick-links">
+          <Link to="/seller/products" className="quick-link-card">
+            <Package size={24} />
+            <div>
+              <h3>My Products</h3>
+              <p>Add, edit and manage your listings</p>
+            </div>
+            <ArrowRight size={16} className="quick-link-arrow" />
+          </Link>
+          <Link to="/seller/token" className="quick-link-card">
+            <Key size={24} />
+            <div>
+              <h3>Redeem Token</h3>
+              <p>Enter your admin token to activate listings</p>
+            </div>
+            <ArrowRight size={16} className="quick-link-arrow" />
+          </Link>
+          <Link to="/seller/profile" className="quick-link-card">
+            <Clock size={24} />
+            <div>
+              <h3>Edit Profile</h3>
+              <p>Update store info, WhatsApp, images</p>
+            </div>
+            <ArrowRight size={16} className="quick-link-arrow" />
+          </Link>
+        </div>
+      </div>
+
+  <br />
         {/* Stats */}
         <div className="seller-stats-grid">
           <div className="seller-stat-card">
@@ -124,44 +214,6 @@ const SellerDashboard = () => {
           </div>
         )}
 
-        {/* Analytics teaser — full charts live on the Monitoring page */}
-        <Link to="/seller/monitoring" className="dash-monitoring-teaser">
-          <BarChart3 size={22} />
-          <div>
-            <h3>Store Analytics</h3>
-            <p>See your views, WhatsApp clicks, and top products with charts</p>
-          </div>
-          <ArrowRight size={16} className="quick-link-arrow" />
-        </Link>
-
-        {/* Quick links */}
-        <div className="dash-quick-links">
-          <Link to="/seller/products" className="quick-link-card">
-            <Package size={24} />
-            <div>
-              <h3>My Products</h3>
-              <p>Add, edit and manage your listings</p>
-            </div>
-            <ArrowRight size={16} className="quick-link-arrow" />
-          </Link>
-          <Link to="/seller/token" className="quick-link-card">
-            <Key size={24} />
-            <div>
-              <h3>Redeem Token</h3>
-              <p>Enter your admin token to activate listings</p>
-            </div>
-            <ArrowRight size={16} className="quick-link-arrow" />
-          </Link>
-          <Link to="/seller/profile" className="quick-link-card">
-            <Clock size={24} />
-            <div>
-              <h3>Edit Profile</h3>
-              <p>Update store info, WhatsApp, images</p>
-            </div>
-            <ArrowRight size={16} className="quick-link-arrow" />
-          </Link>
-        </div>
-      </div>
     </SellerLayout>
   );
 };

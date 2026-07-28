@@ -227,7 +227,7 @@ const SellersPage = () => {
           </h1>
           <p style={{ color: 'var(--font)', fontSize: '0.95rem' }}>
             {total !== null
-              ? `Discover ${total} curated seller${total !== 1 ? 's' : ''} on campus`
+              ? `Discover ${total} curated seller${total !== 1 ? 's' : ''}`
               : 'Loading sellers…'}
           </p>
         </div>
