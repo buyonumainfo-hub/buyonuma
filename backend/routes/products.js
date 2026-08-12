@@ -1,7 +1,7 @@
 import express from 'express';
 import Product from '../models/Product.js';
 import Seller from '../models/Seller.js';
-import { protect, protectSeller } from '../middleware/auth.js';
+import { protect, protectSeller, requirePermission } from '../middleware/auth.js';
 import cache from '../utils/cache.js';
 import { isTokenRequired } from '../utils/tokenSetting.js';
 import { writeLimiter } from '../middleware/rateLimiter.js';
@@ -19,18 +19,18 @@ const router = express.Router();
 const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Mark expired products inactive (run before public queries)
-const cleanExpired = async () => {
-  await Product.updateMany(
-    { expires_at: { $ne: null, $lte: new Date() }, isActive: true },
-    { $set: { isActive: false } }
-  );
-};
-const activateAll = async () => {
-  await Product.updateMany(
-    { isActive: false},
-    { $set: { isActive: true } }
-  );
-};
+// const cleanExpired = async () => {
+//   await Product.updateMany(
+//     { expires_at: { $ne: null, $lte: new Date() }, isActive: true },
+//     { $set: { isActive: false } }
+//   );
+// };
+// const activateAll = async () => {
+//   await Product.updateMany(
+//     { isActive: false},
+//     { $set: { isActive: true } }
+//   );
+// };
 
 // ─── GET /api/products — public ─────────────────────────────────────────────
 // new
@@ -38,17 +38,17 @@ const activateAll = async () => {
 router.get('/', locationQuery, validate, async (req, res) => {
 try {
 const tokenRequired = await isTokenRequired();
-   if (tokenRequired) {
-    await cleanExpired();
-   }else{
-     await activateAll();
-   }
+  //  if (tokenRequired) {
+  //   await cleanExpired();
+  //  }else{
+  //    await activateAll();
+  //  }
 
 const {
 page = 1, limit = 12,
 sort = 'tiktokScore',
 order = 'desc',
-category, search, seller, minPrice, maxPrice,
+category, subcategory, search, seller, minPrice, maxPrice,
 state, city
 } = req.query;
 
@@ -99,6 +99,7 @@ seller: { $in: activeSellersIds },
 };
 
 if (category && category !== 'All') query.category = category;
+if (subcategory && subcategory !== 'All') query.subcategory = subcategory;
 if (seller) {
 const isActive = activeSellersIds.some(id => id.toString() === seller);
 query.seller = isActive ? seller : { $in: [] };
@@ -415,7 +416,7 @@ return shuffled;
 }
 
 // ─── GET /api/products/admin/all — admin ────────────────────────────────────
-router.get('/admin/all', protect, async (req, res) => {
+router.get('/admin/all', protect, requirePermission('products.view'), async (req, res) => {
   try {
     const { page=1, limit=20, sort='createdAt', order='desc', category, search, seller } = req.query;
 
@@ -448,21 +449,155 @@ router.get('/admin/all', protect, async (req, res) => {
 });
 
 // ─── GET /api/products/:id — public ─────────────────────────────────────────
+// Powers the full product detail page: the product itself, enough about
+// the seller to show rating/verified badge/location, and a set of
+// related products (same seller first, then same subcategory/category).
 router.get('/:id', mongoIdParam('id'), validate, async (req, res) => {
   try {
     const cacheKey = `products:single:${req.params.id}`;
-    const cached   =await cache.get(cacheKey);
-    if (cached) return res.json(cached);
+    let result = await cache.get(cacheKey);
 
-    const product = await Product.findById(req.params.id)
-      .populate('seller', 'store_name username profile_picture rating category contact website social_media_handle whatsapp token_expires_at');
+    if (!result) {
+      const product = await Product.findById(req.params.id)
+        .populate('seller', 'store_name username profile_picture rating category contact website social_media_handle whatsapp token_expires_at state city ninStatus');
 
-    if (!product || !product.isActive)
-      return res.status(404).json({ success: false, message: 'Product not found' });
+      if (!product || !product.isActive)
+        return res.status(404).json({ success: false, message: 'Product not found' });
 
-    const result = { success: true, product };
-   await cache.set(cacheKey, result, 30);
+      const [reviewCount, sameSeller, sameCategory] = await Promise.all([
+        (await import('../models/Review.js')).default.countDocuments({ seller: product.seller?._id }),
+        Product.find({ seller: product.seller?._id, _id: { $ne: product._id }, isActive: true }).limit(8).select('name price product_image images category'),
+        Product.find({
+          _id: { $ne: product._id },
+          category: product.category,
+          ...(product.subcategory ? { subcategory: product.subcategory } : {}),
+          isActive: true,
+        }).limit(8).select('name price product_image images category seller').populate('seller', 'store_name username'),
+      ]);
+
+      // Fill related products: same seller's other items first, then
+      // top up with same-category/subcategory items from other sellers,
+      // capped at 8 total, de-duplicated.
+      const seen = new Set(sameSeller.map(p => p._id.toString()));
+      const related = [...sameSeller];
+      for (const p of sameCategory) {
+        if (related.length >= 8) break;
+        if (!seen.has(p._id.toString())) { related.push(p); seen.add(p._id.toString()); }
+      }
+
+      result = {
+        success: true,
+        product,
+        sellerInfo: {
+          reviewCount,
+          isVerified: product.seller?.ninStatus === 'verified',
+          location: [product.seller?.city, product.seller?.state].filter(Boolean).join(', '),
+        },
+        relatedProducts: related,
+      };
+      await cache.set(cacheKey, result, 30);
+    }
+
+    // Bump the buyer's cookie-based interest profile (not cached — this
+    // is per-visitor, not per-product) so /api/products/recommended can
+    // bias toward categories they've actually looked at.
+    const { bumpInterestCookie } = await import('../utils/recommend.js');
+    if (result.product?.category) bumpInterestCookie(req, res, result.product.category);
+
     res.json(result);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── GET /api/products/:id/related — paginated version of the related
+// products bundled into GET /:id above (that one stays capped at 8 for a
+// fast initial page load; this one powers "load more" on the product
+// detail page) ──────────────────────────────────────────────────────────
+router.get('/:id/related', mongoIdParam('id'), validate, async (req, res) => {
+  try {
+    const page  = Math.max(parseInt(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 8, 1), 24);
+
+    const product = await Product.findById(req.params.id).select('seller category subcategory');
+    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+
+    // Same matching rule as the bundled version: same seller's other
+    // items rank first, then same category/subcategory from anyone else.
+    const matchFilter = {
+      _id: { $ne: product._id },
+      isActive: true,
+      $or: [
+        { seller: product.seller },
+        { category: product.category, ...(product.subcategory ? { subcategory: product.subcategory } : {}) },
+      ],
+    };
+
+    const [related, total] = await Promise.all([
+      Product.find(matchFilter)
+        .sort({ seller: product.seller ? -1 : 1, createdAt: -1 }) // rough same-seller-first ordering
+        .select('name price product_image images category seller')
+        .populate('seller', 'store_name username')
+        .skip((page - 1) * limit)
+        .limit(limit),
+      Product.countDocuments(matchFilter),
+    ]);
+
+    res.json({
+      success: true,
+      relatedProducts: related,
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── GET /api/products/recommended — public, cookie-based ──────────────────
+// "For you" rail: biased toward the categories this browser has viewed
+// most (see utils/recommend.js), falling back to newest/top-rated
+// products when there's no interest signal yet (first-time visitor).
+router.get('/meta/recommended', async (req, res) => {
+  try {
+    const { topInterestCategories } = await import('../utils/recommend.js');
+    const categories = topInterestCategories(req);
+    const limitNum = Math.min(parseInt(req.query.limit) || 12, 30);
+
+    const tokenRequired = await isTokenRequired();
+    const sellerFilter = tokenRequired
+      ? { isApproved: true, isActive: true, token_expires_at: { $gt: new Date() } }
+      : { isApproved: true, isActive: true };
+    const activeSellers = await Seller.find(sellerFilter).select('_id');
+    const activeSellerIds = activeSellers.map(s => s._id);
+
+    let products = [];
+    if (categories.length > 0) {
+      products = await Product.find({
+        isActive: true,
+        seller: { $in: activeSellerIds },
+        category: { $in: categories },
+      })
+        .sort({ createdAt: -1 })
+        .limit(limitNum)
+        .populate('seller', 'store_name username profile_picture rating');
+    }
+
+    // Top up with generally popular products if the cookie hasn't given
+    // us enough signal yet (new visitor, or too few matches).
+    if (products.length < limitNum) {
+      const excludeIds = products.map(p => p._id);
+      const filler = await Product.find({
+        isActive: true,
+        seller: { $in: activeSellerIds },
+        _id: { $nin: excludeIds },
+      })
+        .sort({ viewCount: -1, createdAt: -1 })
+        .limit(limitNum - products.length)
+        .populate('seller', 'store_name username profile_picture rating');
+      products = [...products, ...filler];
+    }
+
+    res.json({ success: true, products, basedOnCategories: categories });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -516,7 +651,7 @@ router.get('/:id', mongoIdParam('id'), validate, async (req, res) => {
 //   }
 // });
 
-router.post('/', protect, writeLimiter, productCreateValidators, validate, async (req, res) => {
+router.post('/admin', protect, requirePermission('products.create'), writeLimiter, productCreateValidators, validate, async (req, res) => {
   try {
     const data = { ...req.body };
     if (data.expiry_duration_hours && Number(data.expiry_duration_hours) > 0) {
@@ -538,7 +673,7 @@ router.post('/', protect, writeLimiter, productCreateValidators, validate, async
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
-router.put('/:id', protect, writeLimiter, mongoIdParam('id'), productUpdateValidators, validate, async (req, res) => {
+router.put('/admin/:id', protect, requirePermission('products.edit'), writeLimiter, mongoIdParam('id'), productUpdateValidators, validate, async (req, res) => {
   try {
     const data = { ...req.body };
     if (data.expiry_duration_hours !== undefined) {
@@ -559,7 +694,7 @@ router.put('/:id', protect, writeLimiter, mongoIdParam('id'), productUpdateValid
 });
 
 // ─── DELETE /api/products/:id — admin only ───────────────────────────────────
-router.delete('/:id', protect, writeLimiter, mongoIdParam('id'), validate, async (req, res) => {
+router.delete('/admin/:id', protect, requirePermission('products.delete'), writeLimiter, mongoIdParam('id'), validate, async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
     if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
@@ -574,12 +709,10 @@ router.delete('/:id', protect, writeLimiter, mongoIdParam('id'), validate, async
 // ─── DELETE /api/products/seller/:id — admin seller ───────────────────────────────────
 router.delete('/seller/:id', protectSeller, writeLimiter, mongoIdParam('id'), validate, async (req, res) => {
   try {
-    // SECURITY: previously this deleted ANY product by ID regardless of
-    // which seller owned it — a seller could delete another seller's
-    // product just by guessing/enumerating IDs. Now scoped to the
-    // authenticated seller's own products only.
     const product = await Product.findOneAndDelete({ _id: req.params.id, seller: req.seller.id });
     if (!product) return res.status(404).json({ success: false, message: 'Product not found or not yours' });
+
+    await Seller.findByIdAndUpdate(req.seller.id, { $pull: { pinnedProducts: product._id } });
     await cache.delPrefix('products:');
     await logActivity({ type: 'product_deleted', seller: req.seller.id, product: product._id });
     res.json({ success: true, message: 'Product deleted' });
@@ -587,4 +720,5 @@ router.delete('/seller/:id', protectSeller, writeLimiter, mongoIdParam('id'), va
     res.status(500).json({ success: false, message: err.message });
   }
 });
+
 export default router;

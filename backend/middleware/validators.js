@@ -48,6 +48,11 @@ export const sellerRegisterValidators = [
   body('website').optional({ checkFalsy: true }).isURL().withMessage('Website must be a valid URL'),
   body('social_media_handle').optional().isLength({ max: 100 }),
   body('nin').optional().isLength({ min: 11, max: 11 }).withMessage('NIN must be exactly 11 digits').isNumeric(),
+  // Affiliate referral code from /seller/register?ref=<code> (see
+  // components/seller/SellerAuth.jsx + routes/sellerAuth.js). Optional
+  // and loosely validated on purpose — an unrecognized/expired code is
+  // silently ignored server-side rather than blocking signup.
+  body('referralCode').optional({ checkFalsy: true }).trim().isLength({ max: 20 }),
   body('state').optional().isLength({ max: 20 }),
   // City isn't required for a seller who selected "Worldwide" — they
   // ship/sell everywhere rather than being tied to one town.

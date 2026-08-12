@@ -34,6 +34,18 @@ const productSchema = new mongoose.Schema({
   "Rentals",
   'Other']
   },
+  // Free-text subcategory, scoped under `category` (see
+  // utils/categories.js for the suggested list per category shown in
+  // the seller's product form). Not a strict enum: sellers can type a
+  // subcategory that isn't in the suggested list yet, so the
+  // sort-by-subcategory filter on the product listing page always
+  // reflects what's actually been used.
+  subcategory: {
+    type: String,
+    default: '',
+    trim: true,
+    index: true
+  },
   product_image: {
     type: String,
     default: ''
@@ -72,5 +84,10 @@ const productSchema = new mongoose.Schema({
     default: 0
   }
 }, { timestamps: true });
+
+// Related-products lookup: same seller's other items, then same
+// category/subcategory across sellers. Both benefit from these indexes.
+productSchema.index({ category: 1, subcategory: 1 });
+productSchema.index({ seller: 1, isActive: 1 });
 
 export default mongoose.model('Product', productSchema);

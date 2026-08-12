@@ -9,9 +9,11 @@ import hpp from 'hpp';
 
 import authRoutes         from './routes/auth.js';
 import sellerAuthRoutes   from './routes/sellerAuth.js';
+import buyerAuthRoutes    from './routes/buyerAuth.js';
 import sellerRoutes       from './routes/sellers.js';
 import productRoutes      from './routes/products.js';
 import adminRoutes        from './routes/admin.js';
+import adminRolesRoutes   from './routes/adminRoles.js';
 import sellerProductRoutes from './routes/sellerProducts.js';
 import viewsRoutes        from './routes/views.js';
 import verificationRoutes from './routes/verification.js';
@@ -21,6 +23,15 @@ import aiChatRoutes       from './routes/aiChat.js';
 import monitoringRoutes   from './routes/monitoring.js';
 import metaRoutes         from './routes/meta.js';
 import contactRoutes      from './routes/contact.js';
+import reviewRoutes       from './routes/reviews.js';
+import messageRoutes      from './routes/messages.js';
+import paymentRoutes      from './routes/payments.js';
+import adminPlansRoutes   from './routes/adminPlans.js';
+import affiliateAuthRoutes   from './routes/affiliateAuth.js';
+import affiliateRoutes       from './routes/affiliates.js';
+import adminAffiliatesRoutes from './routes/adminAffiliates.js';
+
+import cookieParser from 'cookie-parser';
 
 import { generalLimiter } from './middleware/rateLimiter.js';
 //import { sanitizeInput, preventNoSQLInjection } from './middleware/sanitize.js';
@@ -68,8 +79,21 @@ app.use(compression());
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // ── Body parsing ─────────────────────────────────────────────────────────
-app.use(express.json({ limit: '10mb' }));
+// The `verify` callback stashes the exact raw request bytes on
+// `req.rawBody`. Needed by routes/payments.js' Opay webhook, which must
+// verify an HMAC signature against the EXACT bytes the sender signed —
+// re-serializing the already-parsed `req.body` back to JSON is NOT
+// guaranteed to reproduce those bytes (see utils/opay.js for the bug
+// this fixed). Cheap to capture for every request, only used by that
+// one route.
+app.use(express.json({
+  limit: '10mb',
+  verify: (req, _res, buf) => { req.rawBody = buf; },
+}));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Needed for the anonymous cookie-based recommendation signal (see
+// utils/recommend.js) — first-party, non-sensitive, category counts only.
+app.use(cookieParser());
 
 // ── Input hardening ──────────────────────────────────────────────────────
 // Order matters: sanitize HTML/XSS first, then strip Mongo operator
@@ -100,9 +124,11 @@ app.use(ensureDbConnected);
 // ── Routes ────────────────────────────────────────────────────────────────
 app.use('/api/auth',          authRoutes);
 app.use('/api/seller-auth',   sellerAuthRoutes);
+app.use('/api/buyer-auth',    buyerAuthRoutes);
 app.use('/api/sellers',       sellerRoutes);
 app.use('/api/products',      productRoutes);
 app.use('/api/admin',         adminRoutes);
+app.use('/api/admin-roles',   adminRolesRoutes);
 app.use('/api/seller',        sellerProductRoutes);
 app.use('/api/views',         viewsRoutes);
 app.use('/api/verification',  verificationRoutes);
@@ -112,6 +138,13 @@ app.use('/api/ai-chat',       aiChatRoutes);
 app.use('/api/monitoring',    monitoringRoutes);
 app.use('/api/meta',          metaRoutes);
 app.use('/api/contact',       contactRoutes);
+app.use('/api/reviews',       reviewRoutes);
+app.use('/api/messages',      messageRoutes);
+app.use('/api/payments',      paymentRoutes);
+app.use('/api/admin-plans',   adminPlansRoutes);
+app.use('/api/affiliate-auth',   affiliateAuthRoutes);
+app.use('/api/affiliates',       affiliateRoutes);
+app.use('/api/admin-affiliates', adminAffiliatesRoutes);
 
 // ── 404 handler ──────────────────────────────────────────────────────────
 app.use((req, res) => {

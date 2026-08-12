@@ -4,7 +4,7 @@ import { body } from 'express-validator';
 import Seller from '../models/Seller.js';
 import Product from '../models/Product.js';
 import SellerToken from '../models/SellerToken.js';
-import { protect } from '../middleware/auth.js';
+import { protect, requirePermission } from '../middleware/auth.js';
 import cache from '../utils/cache.js';
 import { writeLimiter } from '../middleware/rateLimiter.js';
 import { mongoIdParam } from '../middleware/validators.js';
@@ -98,7 +98,7 @@ router.get('/token-setting', protect, async (req, res) => {
 });
 
 // ─── PUT /api/admin/token-setting ────────────────────────────────────────────
-router.put('/token-setting', protect, writeLimiter,
+router.put('/token-setting', protect, requirePermission('settings.edit'), writeLimiter,
   body('tokenRequired').isBoolean().withMessage('tokenRequired must be true or false'),
   validate,
   async (req, res) => {

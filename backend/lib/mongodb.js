@@ -78,6 +78,44 @@ export const connectToDatabase = async () => {
     throw err;
   }
 
+  // Seller plan pricing/limits are admin-editable and cached in-memory
+  // (see utils/plans.js — Seller.js's productLimit/pinLimit virtuals
+  // need a synchronous read, which rules out hitting the DB on every
+  // access). That cache needs populating once per cold start, right
+  // after the connection is ready — same `global`-cached-promise
+  // pattern as the connection itself, so concurrent requests on a
+  // freshly-started container all await the same single init instead of
+  // each kicking off their own seed/load.
+  if (!global._plansInitPromise) {
+    global._plansInitPromise = (async () => {
+      const { seedDefaultPlansIfEmpty, loadPlansCache } = await import('../utils/plans.js');
+      await seedDefaultPlansIfEmpty();
+      await loadPlansCache();
+    })().catch((err) => {
+      console.error('❌ Plan cache initialization failed:', err.message);
+      global._plansInitPromise = null; // allow a retry on the next request rather than staying permanently broken
+      throw err;
+    });
+  }
+  await global._plansInitPromise;
+
+  // Same reasoning/pattern as the plans cache above, for the
+  // admin-controlled affiliate commission percentage (see
+  // utils/affiliateSettings.js) — a single DB-backed settings row,
+  // mirrored into an in-memory cache once per cold start.
+  if (!global._affiliateSettingsInitPromise) {
+    global._affiliateSettingsInitPromise = (async () => {
+      const { seedAffiliateSettingsIfEmpty, loadAffiliateSettingsCache } = await import('../utils/affiliateSettings.js');
+      await seedAffiliateSettingsIfEmpty();
+      await loadAffiliateSettingsCache();
+    })().catch((err) => {
+      console.error('❌ Affiliate settings cache initialization failed:', err.message);
+      global._affiliateSettingsInitPromise = null;
+      throw err;
+    });
+  }
+  await global._affiliateSettingsInitPromise;
+
   return cached.conn;
 };
 

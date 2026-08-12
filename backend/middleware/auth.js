@@ -84,7 +84,49 @@ export const protectSeller = (req, res, next) => {
   }
 };
 
-// Either admin or seller — used by routes both roles can reach (e.g. notifications)
+// Buyer-only protect
+export const protectBuyer = (req, res, next) => {
+  const token = getToken(req);
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Not authorized, no token' });
+  }
+  let secret;
+  try { secret = getJwtSecret(); } catch (err) { console.error(err.message); return secretMisconfiguredResponse(res); }
+  try {
+    const decoded = jwt.verify(token, secret);
+    if (decoded.role !== 'buyer') {
+      return res.status(403).json({ success: false, message: 'Buyer access required' });
+    }
+    req.buyer = decoded;
+    next();
+  } catch {
+    return res.status(401).json({ success: false, message: 'Token invalid or expired' });
+  }
+};
+
+// Affiliate-only protect
+export const protectAffiliate = (req, res, next) => {
+  const token = getToken(req);
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Not authorized, no token' });
+  }
+  let secret;
+  try { secret = getJwtSecret(); } catch (err) { console.error(err.message); return secretMisconfiguredResponse(res); }
+  try {
+    const decoded = jwt.verify(token, secret);
+    if (decoded.role !== 'affiliate') {
+      return res.status(403).json({ success: false, message: 'Affiliate access required' });
+    }
+    req.affiliate = decoded;
+    next();
+  } catch {
+    return res.status(401).json({ success: false, message: 'Token invalid or expired' });
+  }
+};
+
+// Any of admin / seller / buyer / affiliate — used by routes more than
+// one role can reach (e.g. messaging, which both a buyer and a seller
+// send to).
 export const protectAny = (req, res, next) => {
   const token = getToken(req);
   if (!token) {
@@ -96,6 +138,8 @@ export const protectAny = (req, res, next) => {
     const decoded = jwt.verify(token, secret);
     if (decoded.role === 'admin') req.admin = decoded;
     else if (decoded.role === 'seller') req.seller = decoded;
+    else if (decoded.role === 'buyer') req.buyer = decoded;
+    else if (decoded.role === 'affiliate') req.affiliate = decoded;
     else return res.status(403).json({ success: false, message: 'Access denied' });
     next();
   } catch {
@@ -103,8 +147,8 @@ export const protectAny = (req, res, next) => {
   }
 };
 
-// Optional auth — attaches req.admin/req.seller if a valid token is present,
-// but never blocks the request.
+// Optional auth — attaches req.admin/req.seller/req.buyer/req.affiliate
+// if a valid token is present, but never blocks the request.
 export const optionalAuth = (req, res, next) => {
   const token = getToken(req);
   if (!token) return next();
@@ -114,10 +158,34 @@ export const optionalAuth = (req, res, next) => {
     const decoded = jwt.verify(token, secret);
     if (decoded.role === 'admin') req.admin = decoded;
     else if (decoded.role === 'seller') req.seller = decoded;
+    else if (decoded.role === 'buyer') req.buyer = decoded;
+    else if (decoded.role === 'affiliate') req.affiliate = decoded;
   } catch {
     /* invalid/expired token on an optional route — just proceed unauthenticated */
   }
   next();
+};
+
+// ── Admin RBAC ────────────────────────────────────────────────────────────
+// Use AFTER `protect`. Loads the admin's role (if any) and checks it
+// grants `permission`. An admin with no role (`role: null`) is treated
+// as a super admin for backward compatibility — see models/Admin.js.
+// Usage: router.delete('/sellers/:id', protect, requirePermission('sellers.delete'), handler)
+export const requirePermission = (permission) => async (req, res, next) => {
+  try {
+    const Admin = (await import('../models/Admin.js')).default;
+    const admin = await Admin.findById(req.admin.id).populate('role');
+    if (!admin) return res.status(401).json({ success: false, message: 'Admin not found' });
+
+    if (!admin.role || admin.role.isSuperAdmin) return next(); // super admin — full access
+
+    if (!admin.role.permissions.includes(permission)) {
+      return res.status(403).json({ success: false, message: `Your admin role does not have permission: ${permission}` });
+    }
+    next();
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Permission check failed' });
+  }
 };
 
 export { getJwtSecret as JWT_SECRET_GETTER };

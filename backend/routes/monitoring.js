@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import Seller from '../models/Seller.js';
 import Product from '../models/Product.js';
 import ActivityLog from '../models/ActivityLog.js';
-import { protect, protectSeller } from '../middleware/auth.js';
+import { protect, protectSeller, requirePermission } from '../middleware/auth.js';
 import cache from '../utils/cache.js';
 
 const router = express.Router();
@@ -28,7 +28,7 @@ const dailySeries = (rawCounts, days) => {
 // products added, views) over the last 14 days, plus a recent activity
 // feed limited to the last 24 hours.
 // ─────────────────────────────────────────────────────────────────────────
-router.get('/admin', protect, async (req, res) => {
+router.get('/admin', protect, requirePermission('monitoring.view'), async (req, res) => {
   try {
     const cacheKey = 'monitoring:admin';
     const cached = await cache.get(cacheKey);

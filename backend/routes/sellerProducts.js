@@ -189,7 +189,21 @@ router.post('/products', protectSeller, writeLimiter, productCreateValidators, v
   try {
     const sellerDoc = await Seller.findById(req.seller.id);
     if (!sellerDoc?.isApproved) return res.status(403).json({ success: false, message: 'Account must be approved before posting products' });
-    const { name, description, price, category, product_image, images, time_frame } = req.body;
+    const { name, description, price, category, subcategory, product_image, images, time_frame } = req.body;
+
+    // ── Plan-based product cap ────────────────────────────────────────
+    // Free sellers may post up to sellerDoc.productLimit (50) products.
+    // Upgrading via /api/payments/opay raises this — see utils/plans.js.
+    const currentCount = await Product.countDocuments({ seller: req.seller.id });
+    if (currentCount >= sellerDoc.productLimit) {
+      return res.status(403).json({
+        success: false,
+        code: 'PRODUCT_LIMIT_REACHED',
+        message: `You've reached your ${sellerDoc.productLimit}-product limit on the ${sellerDoc.plan} plan. Upgrade your plan to post more.`,
+        productLimit: sellerDoc.productLimit,
+        plan: sellerDoc.plan,
+      });
+    }
 
      const tokenRequired = await isTokenRequired();
      const hasToken = !tokenRequired || (sellerDoc.token_expires_at && new Date(sellerDoc.token_expires_at) > new Date());
@@ -197,6 +211,7 @@ router.post('/products', protectSeller, writeLimiter, productCreateValidators, v
     if (imageList.length > 5) imageList = imageList.slice(0, 5);
     const product  = new Product({
       name, description: description||'', price, category,
+      subcategory: subcategory || '',
       images: imageList,
       product_image: imageList[0] || '',
       time_frame: time_frame||'',
@@ -217,7 +232,7 @@ router.put('/products/:id', protectSeller, writeLimiter, mongoIdParam('id'), pro
   try {
     const product = await Product.findOne({ _id: req.params.id, seller: req.seller.id });
     if (!product) return res.status(404).json({ success: false, message: 'Product not found or not yours' });
-    const allowed = ['name','description','price','category','product_image','images','time_frame'];
+    const allowed = ['name','description','price','category','subcategory','product_image','images','time_frame'];
     allowed.forEach(k => { if (req.body[k] !== undefined) product[k] = req.body[k]; });
     if (Array.isArray(product.images)) {
       if (product.images.length > 5) product.images = product.images.slice(0, 5);

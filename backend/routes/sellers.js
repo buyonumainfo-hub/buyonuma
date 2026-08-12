@@ -1,7 +1,7 @@
 import express from 'express';
 import Seller from '../models/Seller.js';
 import Product from '../models/Product.js';
-import { protect } from '../middleware/auth.js';
+import { protect, requirePermission } from '../middleware/auth.js';
 import cache from '../utils/cache.js';
 import { isTokenRequired } from '../utils/tokenSetting.js';
 import { writeLimiter } from '../middleware/rateLimiter.js';
@@ -9,8 +9,124 @@ import { mongoIdParam, sellerApproveValidators, locationQuery } from '../middlew
 import { validate } from '../middleware/validate.js';
 import { logActivity } from '../utils/activityLog.js';
 import { createNotification } from '../utils/notify.js';
+import { protectSeller } from '../middleware/auth.js';
+import { creditAffiliateCommission } from '../utils/affiliateCommission.js';
+import { getPlan } from '../utils/plans.js';
+import { body } from 'express-validator';
 
 const router = express.Router();
+
+// ─── PUT /api/sellers/store/theme — seller customizes their store page ─────
+// This is what makes the seller's SellerDetailPage look "theirs" — accent
+// color, layout, banner text — read back by the public GET /:id above.
+router.put('/store/theme', protectSeller, writeLimiter,
+  body('primaryColor').optional().matches(/^#[0-9a-fA-F]{6}$/).withMessage('primaryColor must be a hex color like #b8923a'),
+  body('layout').optional().isIn(['grid', 'list']),
+  body('bannerHeadline').optional().isLength({ max: 120 }),
+  body('bannerSubtext').optional().isLength({ max: 200 }),
+  body('darkMode').optional().isBoolean(),
+  validate,
+  async (req, res) => {
+    try {
+      const allowed = ['primaryColor', 'layout', 'bannerHeadline', 'bannerSubtext', 'darkMode'];
+      const seller = await Seller.findById(req.seller.id);
+      if (!seller) return res.status(404).json({ success: false, message: 'Seller not found' });
+
+      allowed.forEach(k => { if (req.body[k] !== undefined) seller.storeTheme[k] = req.body[k]; });
+      await seller.save();
+
+      // The public store page (SellerDetailPage) reads via GET
+      // /sellers/user/:username, which caches under `seller:<username>` —
+      // NOT `seller:<id>`. Clearing only the id-keyed entry left the
+      // public page serving a stale cached response until the 30s TTL
+      // expired, which looked like "the edit doesn't work."
+      await cache.delPrefix('sellers:');
+      await cache.del(`seller:${req.seller.id}`);
+      await cache.del(`seller:${seller.username}`);
+      res.json({ success: true, storeTheme: seller.storeTheme });
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  }
+);
+
+// ─── PUT /api/sellers/store/pins — pin up to pinLimit products to the top ──
+router.put('/store/pins', protectSeller, writeLimiter,
+  body('productIds').isArray().withMessage('productIds must be an array'),
+  validate,
+  async (req, res) => {
+    try {
+      const seller = await Seller.findById(req.seller.id);
+      if (!seller) return res.status(404).json({ success: false, message: 'Seller not found' });
+
+      const { productIds } = req.body;
+     // console.log(productIds, seller.pinLimit);
+      if (productIds.length > seller.pinLimit) {
+        return res.status(403).json({
+          success: false,
+          message: `You can pin up to ${seller.pinLimit} products on the ${seller.plan} plan. Upgrade to pin more.`,
+          pinLimit: seller.pinLimit,
+        });
+      }
+
+      // Only allow pinning the seller's own products.
+      const owned = await Product.find({ _id: { $in: productIds }, seller: seller._id }).select('_id');
+      // console.log('owned', owned.map(p => p._id.toString()));
+      if (owned.length !== productIds.length) {
+        return res.status(400).json({ success: false, message: 'One or more products are not yours' });
+      }
+
+      seller.pinnedProducts = productIds;
+      await seller.save();
+
+      await cache.delPrefix('sellers:');
+      await cache.del(`seller:${req.seller.id}`);
+      await cache.del(`seller:${seller.username}`);
+      res.json({ success: true, pinnedProducts: seller.pinnedProducts });
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  }
+);
+
+// ─── PUT /api/sellers/settings/email — change login email ──────────────────
+router.put('/settings/email', protectSeller, writeLimiter,
+  body('email').trim().isEmail().normalizeEmail(),
+  body('currentPassword').notEmpty().withMessage('Enter your current password to confirm this change'),
+  validate,
+  async (req, res) => {
+    try {
+      const seller = await Seller.findById(req.seller.id).select('+password');
+      if (!seller) return res.status(404).json({ success: false, message: 'Seller not found' });
+      if (!seller.password) {
+        return res.status(400).json({ success: false, message: 'Your account uses Google sign-in and has no password set. Set a password first, then you can change your email.' });
+      }
+      const match = await seller.comparePassword(req.body.currentPassword);
+      if (!match) return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+
+      const taken = await Seller.findOne({ email: req.body.email, _id: { $ne: seller._id } });
+      if (taken) return res.status(400).json({ success: false, message: 'That email is already in use' });
+
+      seller.email = req.body.email;
+      await seller.save();
+      await cache.del(`seller:${req.seller.id}`);
+      res.json({ success: true, message: 'Email updated' });
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  }
+);
+
+// ─── PUT /api/sellers/settings/theme-preference — light/dark/system ────────
+router.put('/settings/theme-preference', protectSeller, writeLimiter,
+  body('themePreference').isIn(['light', 'dark', 'system']),
+  validate,
+  async (req, res) => {
+    try {
+      const seller = await Seller.findByIdAndUpdate(
+        req.seller.id,
+        { themePreference: req.body.themePreference },
+        { new: true }
+      ).select('-password');
+      if (!seller) return res.status(404).json({ success: false, message: 'Seller not found' });
+      res.json({ success: true, themePreference: seller.themePreference });
+    } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+  }
+);
 
 // // ─── GET /api/sellers — public ──────────────────────────────────────────────
 // router.get('/', async (req, res) => {
@@ -242,7 +358,7 @@ function deterministicShuffle(array, seed) {
 
 
 // ─── GET /api/sellers/admin/all — admin ─────────────────────────────────────
-router.get('/admin/all', protect, async (req, res) => {
+router.get('/admin/all', protect, requirePermission('sellers.view'), async (req, res) => {
   try {
     const cacheKey = `sellers:admin:${JSON.stringify(req.query)}`;
     const cached   =await cache.get(cacheKey);
@@ -282,15 +398,40 @@ router.get('/:id', mongoIdParam('id'), validate, async (req, res) => {
        
 
     // Only show products if seller has active token
-    const products = hasToken
+    let products = hasToken
       ? await Product.find({
           seller: seller._id,
           isActive: true,
           $or: [{ expires_at: null }, { expires_at: { $gt: now } }],
-        }).populate('seller', 'store_name username profile_picture rating category contact website social_media_handle whatsapp token_expires_at')
+        }).populate('seller', 'store_name username profile_picture rating category contact website social_media_handle whatsapp token_expires_at state city ninStatus')
       : [];
 
-    const result = { success: true, seller, products };
+    // Pinned products (up to seller.pinLimit) surface first, in the
+    // order the seller arranged them, followed by everything else.
+    if (seller.pinnedProducts?.length) {
+      const pinnedIds = seller.pinnedProducts.map(String);
+      const pinnedSet = new Set(pinnedIds);
+      const pinnedFirst = pinnedIds
+        .map(id => products.find(p => p._id.toString() === id))
+        .filter(Boolean);
+      const rest = products.filter(p => !pinnedSet.has(p._id.toString()));
+      products = [...pinnedFirst, ...rest];
+    }
+
+    const Review = (await import('../models/Review.js')).default;
+    const reviewCount = await Review.countDocuments({ seller: seller._id });
+
+    const result = {
+      success: true,
+      seller,
+      products,
+      sellerInfo: {
+        reviewCount,
+        isVerified: seller.ninStatus === 'verified',
+        location: [seller.city, seller.state].filter(Boolean).join(', '),
+        pinnedCount: seller.pinnedProducts?.length || 0,
+      },
+    };
    await cache.set(cacheKey, result, 30);
     res.json(result);
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
@@ -313,22 +454,43 @@ router.get('/user/:username', async (req, res) => {
        
 
     // Only show products if seller has active token
-    const products = hasToken
+    let products = hasToken
       ? await Product.find({
           seller: seller._id,
           isActive: true,
          // $or: [{ expires_at: null }, { expires_at: { $gt: now } }],
-        }).populate('seller', 'store_name username profile_picture rating category contact website social_media_handle whatsapp token_expires_at')
+        }).populate('seller', 'store_name username profile_picture rating category contact website social_media_handle whatsapp token_expires_at state city ninStatus')
       : [];
 
-    const result = { success: true, seller, products };
+    if (seller.pinnedProducts?.length) {
+      const pinnedIds = seller.pinnedProducts.map(String);
+      const pinnedSet = new Set(pinnedIds);
+      const pinnedFirst = pinnedIds.map(pid => products.find(p => p._id.toString() === pid)).filter(Boolean);
+      const rest = products.filter(p => !pinnedSet.has(p._id.toString()));
+      products = [...pinnedFirst, ...rest];
+    }
+
+    const Review = (await import('../models/Review.js')).default;
+    const reviewCount = await Review.countDocuments({ seller: seller._id });
+
+    const result = {
+      success: true,
+      seller,
+      products,
+      sellerInfo: {
+        reviewCount,
+        isVerified: seller.ninStatus === 'verified',
+        location: [seller.city, seller.state].filter(Boolean).join(', '),
+        pinnedCount: seller.pinnedProducts?.length || 0,
+      },
+    };
    await cache.set(cacheKey, result, 30);
     res.json(result);
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
 // ─── POST /api/sellers — admin creates seller ────────────────────────────────
-router.post('/admin/', protect, writeLimiter, async (req, res) => {
+router.post('/admin/', protect, requirePermission('sellers.create'), writeLimiter, async (req, res) => {
   try {
     const data = { ...req.body };
     data.isApproved = true;
@@ -346,21 +508,48 @@ router.post('/admin/', protect, writeLimiter, async (req, res) => {
 });
 
 // ─── PUT /api/sellers/:id — admin updates seller ─────────────────────────────
-router.put('/admin/:id', protect, writeLimiter, mongoIdParam('id'), validate, async (req, res) => {
+router.put('/admin/:id', protect, requirePermission('sellers.edit'), writeLimiter, mongoIdParam('id'), validate, async (req, res) => {
   try {
     const data = { ...req.body };
     delete data.password;
     delete data.nin; delete data.ninStatus; delete data.ninProviderRef; // use the dedicated verification endpoint instead
+
+    const before = await Seller.findById(req.params.id).select('plan referredByAffiliate');
+    if (!before) return res.status(404).json({ success: false, message: 'Seller not found' });
+
     const seller = await Seller.findByIdAndUpdate(req.params.id, data, { new: true, runValidators: true }).select('-password');
     if (!seller) return res.status(404).json({ success: false, message: 'Seller not found' });
     await cache.delPrefix('sellers:');
     await cache.del(`seller:${req.params.id}`);
+
+    // ── Affiliate commission on an admin-granted plan change ────────────
+    // If the admin just moved this seller onto a higher-value plan than
+    // they were on, treat it exactly like the seller paid for that
+    // upgrade themselves — see utils/affiliateCommission.js. Only fires
+    // for an actual upgrade (new plan costs more than the old one), and
+    // only if the seller was referred by an affiliate in the first
+    // place; the whole behavior can be switched off from the Affiliate
+    // Program Settings panel (AffiliateSettings.creditAdminPlanChanges).
+    if (data.plan && data.plan !== before.plan && before.referredByAffiliate) {
+      const oldPrice = getPlan(before.plan).priceNGN;
+      const newPrice = getPlan(data.plan).priceNGN;
+      if (newPrice > oldPrice) {
+        await creditAffiliateCommission({
+          seller,
+          plan: data.plan,
+          amount: newPrice,
+          source: 'admin_grant',
+          grantedByAdmin: req.admin.id,
+        });
+      }
+    }
+
     res.json({ success: true, seller, message: 'Seller updated successfully' });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
 // ─── PATCH /api/sellers/:id/approve — admin approve/suspend ─────────────────
-router.patch('/admin/:id/approve',protect, writeLimiter, mongoIdParam('id'), sellerApproveValidators, validate, async (req, res) => {
+router.patch('/admin/:id/approve',protect, requirePermission('sellers.approve'), writeLimiter, mongoIdParam('id'), sellerApproveValidators, validate, async (req, res) => {
   try {
     const { isApproved } = req.body;
     const seller = await Seller.findByIdAndUpdate(req.params.id, { isApproved }, { new: true }).select('-password');
@@ -387,7 +576,7 @@ router.patch('/admin/:id/approve',protect, writeLimiter, mongoIdParam('id'), sel
 });
 
 // ─── DELETE /api/sellers/:id ─────────────────────────────────────────────────
-router.delete('/admin/:id', protect, writeLimiter, mongoIdParam('id'), validate, async (req, res) => {
+router.delete('/admin/:id', protect, requirePermission('sellers.delete'), writeLimiter, mongoIdParam('id'), validate, async (req, res) => {
   try {
     const seller = await Seller.findByIdAndDelete(req.params.id);
     if (!seller) return res.status(404).json({ success: false, message: 'Seller not found' });

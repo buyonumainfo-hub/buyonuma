@@ -102,8 +102,21 @@ router.put('/change-password', protect, adminChangePasswordValidators, validate,
 });
 
 // GET /api/auth/verify
-router.get('/verify', protect, (req, res) => {
-  res.json({ success: true, admin: req.admin });
+router.get('/verify', protect, async (req, res) => {
+  try {
+    const admin = await Admin.findById(req.admin.id).select('-password').populate('role', 'name permissions isSuperAdmin');
+    if (!admin) return res.status(404).json({ success: false, message: 'Admin not found' });
+    // No role assigned = legacy full-access admin (see models/Admin.js).
+    const isSuperAdmin = !admin.role || admin.role.isSuperAdmin;
+    res.json({
+      success: true,
+      admin: { id: admin._id, username: admin.username, role: admin.role?.name || null },
+      permissions: isSuperAdmin ? null : (admin.role.permissions || []), // null = unrestricted (super admin)
+      isSuperAdmin,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
 });
 
 export default router;

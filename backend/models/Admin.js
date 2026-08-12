@@ -11,7 +11,14 @@ const adminSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true
-  }
+  },
+  // ── Role-based access control ─────────────────────────────────────────
+  // null role = legacy/original admin account, treated as super admin
+  // (full access) for backward compatibility with installs that existed
+  // before roles were added. New admins created via /admin/team should
+  // always be given an explicit AdminRole.
+  role: { type: mongoose.Schema.Types.ObjectId, ref: 'AdminRole', default: null },
+  email: { type: String, default: '', trim: true, lowercase: true },
 }, { timestamps: true });
 
 adminSchema.pre('save', async function (next) {

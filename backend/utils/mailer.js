@@ -186,6 +186,59 @@ export const sendPasswordResetEmail = async ({ to, store_name, code }) => {
 /**
  * Send a general contact/support email from a visitor to the admin inbox.
  */
+/**
+ * Notifies a seller by email that a buyer sent them a message. Kept
+ * intentionally short (a chat notification, not a newsletter) — the CTA
+ * links straight to the seller's messages tab.
+ */
+export const sendNewMessageEmail = async ({ to, sellerName, buyerName, preview, link }) => {
+  try {
+    const transporter = await getTransporter();
+    const fromName  = process.env.SMTP_FROM_NAME || 'buyonuma';
+    const fromEmail = process.env.SMTP_USER      || 'noreply@lensuniversity.edu.ng';
+
+    const info = await transporter.sendMail({
+      from: `"${fromName}" <${fromEmail}>`,
+      to,
+      subject: `💬 New message from ${escapeHtml(buyerName)}`,
+      html: `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" />
+<style>
+  body { font-family:'Segoe UI', Arial, sans-serif; background:#f5f4f0; margin:0; padding:0; }
+  .wrap { max-width: 480px; margin: 40px auto; background:#fff; border-radius:12px; overflow:hidden; box-shadow:0 4px 24px rgba(0,0,0,0.08); }
+  .header { background:#0d0d0d; padding:24px 32px; }
+  .header h1 { color:#b8923a; font-size:1.1rem; margin:0; font-family:Georgia, serif; }
+  .body { padding:28px 32px; }
+  .body p { font-size:0.9rem; color:#4a4a4a; line-height:1.6; }
+  .msg-preview { background:#faf8f3; border-left:3px solid #b8923a; padding:12px 16px; border-radius:4px; font-size:0.88rem; color:#333; margin:14px 0; }
+  .btn { display:inline-block; background:#b8923a; color:#fff; padding:11px 26px; border-radius:8px; text-decoration:none; font-weight:700; font-size:0.88rem; }
+  .footer { background:#f5f4f0; padding:16px 32px; text-align:center; font-size:0.72rem; color:#999; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header"><h1>New message on BuyOnUma</h1></div>
+  <div class="body">
+    <p>Hi ${escapeHtml(sellerName)},</p>
+    <p><strong>${escapeHtml(buyerName)}</strong> just sent you a message:</p>
+    <div class="msg-preview">"${escapeHtml(preview)}"</div>
+    <a href="${link}" class="btn">Reply now</a>
+  </div>
+  <div class="footer">You're receiving this because a buyer messaged your store on BuyOnUma.</div>
+</div>
+</body>
+</html>`,
+    });
+    console.log('📧 New-message email sent:', info.messageId);
+    return true;
+  } catch (err) {
+    console.error('Failed to send new-message email:', err.message);
+    return false; // never block the message send on an email failure
+  }
+};
+
 export const sendContactEmail = async ({ name, email, message }) => {
   try {
     const transporter = await getTransporter();

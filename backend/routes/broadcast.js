@@ -1,6 +1,6 @@
 import express from 'express';
 import Seller from '../models/Seller.js';
-import { protect } from '../middleware/auth.js';
+import { protect, requirePermission } from '../middleware/auth.js';
 import { broadcastLimiter } from '../middleware/rateLimiter.js';
 import { broadcastEmailValidators } from '../middleware/validators.js';
 import { validate } from '../middleware/validate.js';
@@ -25,7 +25,7 @@ const router = express.Router();
  * counts), or (b) push the job onto a queue (e.g. Upstash QStash) and have
  * a separate endpoint process it — ask if you'd like that wired in.
  */
-router.post('/email', protect, broadcastLimiter, broadcastEmailValidators, validate, async (req, res) => {
+router.post('/admin/email', protect, requirePermission('broadcast.send'), broadcastLimiter, broadcastEmailValidators, validate, async (req, res) => {
   try {
     const { subject, message, audience = 'all' } = req.body;
 

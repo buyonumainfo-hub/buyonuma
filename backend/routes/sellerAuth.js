@@ -1,6 +1,8 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import Seller from '../models/Seller.js';
+import Affiliate from '../models/Affiliate.js';
+import AffiliateReferral from '../models/AffiliateReferral.js';
 import { protectSeller, JWT_SECRET_GETTER } from '../middleware/auth.js';
 import { sendSellerWelcomeEmail, sendPasswordResetEmail } from '../utils/mailer.js';
 import cache from '../utils/cache.js';
@@ -16,8 +18,92 @@ import { validate } from '../middleware/validate.js';
 import { logActivity } from '../utils/activityLog.js';
 import { createNotification } from '../utils/notify.js';
 import { body } from 'express-validator';
+import { verifyGoogleToken, isGoogleAuthConfigured } from '../utils/googleAuth.js';
+import { suggestUsernames } from '../utils/usernameSuggest.js';
 
 const router = express.Router();
+
+// ─── GET /api/seller-auth/check-username ────────────────────────────────────
+// Called live from the registration form as the seller types a username.
+// If taken, returns a handful of available alternatives so the seller
+// doesn't have to guess-and-check manually.
+router.get('/check-username', async (req, res) => {
+  try {
+    const username = String(req.query.username || '').trim().toLowerCase();
+    if (!username) return res.status(400).json({ success: false, message: 'username is required' });
+
+    const existing = await Seller.findOne({ username }).select('_id');
+    if (!existing) return res.json({ success: true, available: true });
+
+    const suggestions = await suggestUsernames(username, req.query.store_name || '');
+    res.json({ success: true, available: false, suggestions });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── POST /api/seller-auth/google ───────────────────────────────────────────
+// Google sign-in/sign-up for sellers. First-time Google sign-in creates
+// a pending (unapproved, no store details yet) seller account that the
+// seller then completes via /seller/profile — we can't invent a
+// store_name/category on their behalf.
+router.post('/google', authLimiter,
+  body('credential').notEmpty().withMessage('Missing Google credential'),
+  validate,
+  async (req, res) => {
+    if (!isGoogleAuthConfigured()) {
+      return res.status(503).json({ success: false, message: 'Google sign-in is not configured on this server yet.' });
+    }
+    try {
+      const profile = await verifyGoogleToken(req.body.credential);
+
+      let seller = await Seller.findOne({ $or: [{ googleId: profile.googleId }, { email: profile.email }] });
+      let isNewAccount = false;
+
+      if (seller) {
+        if (!seller.googleId) { seller.googleId = profile.googleId; await seller.save(); }
+      } else {
+        isNewAccount = true;
+        // Generate a safe starting username from the Google account name;
+        // suggestUsernames guarantees it's actually free.
+        const [firstSuggestion] = await suggestUsernames(profile.email.split('@')[0]);
+        seller = await Seller.create({
+          username: firstSuggestion || `seller${Date.now()}`,
+          email: profile.email,
+          googleId: profile.googleId,
+          profile_picture: profile.picture,
+          store_name: profile.name ? `${profile.name}'s Store` : 'My Store',
+          category: 'Other',
+          password: null,
+          isApproved: false,
+        });
+        await logActivity({ type: 'seller_registered', seller: seller._id, meta: { via: 'google' }, ip: req.ip });
+      }
+
+      const token = jwt.sign(
+        { id: seller._id, username: seller.username, store_name: seller.store_name, role: 'seller' },
+        JWT_SECRET_GETTER(),
+        { expiresIn: '30d' }
+      );
+
+      res.json({
+        success: true,
+        token,
+        isNewAccount,
+        seller: {
+          _id: seller._id, username: seller.username, email: seller.email,
+          store_name: seller.store_name, category: seller.category,
+          profile_picture: seller.profile_picture, isApproved: seller.isApproved,
+        },
+        message: isNewAccount
+          ? 'Account created via Google — finish setting up your store details, then wait for admin approval.'
+          : 'Signed in with Google.',
+      });
+    } catch (err) {
+      res.status(401).json({ success: false, message: 'Google sign-in failed: ' + err.message });
+    }
+  }
+);
 
 // POST /api/seller-auth/register
 router.post('/register', authLimiter, sellerRegisterValidators, validate, async (req, res) => {
@@ -25,13 +111,17 @@ router.post('/register', authLimiter, sellerRegisterValidators, validate, async 
     const {
       username, email, password, store_name, category,
       description, contact, whatsapp, website, social_media_handle,
-      profile_picture, banner, state, city
+      profile_picture, banner, state, city, referralCode
     } = req.body;
 
     const exists = await Seller.findOne({ $or: [{ username }, { email }] });
     if (exists) {
       const field = exists.username === username ? 'Username' : 'Email';
-      return res.status(400).json({ success: false, message: `${field} already taken` });
+      const payload = { success: false, message: `${field} already taken` };
+      if (field === 'Username') {
+        payload.suggestions = await suggestUsernames(username, store_name);
+      }
+      return res.status(400).json(payload);
     }
 
     const seller = new Seller({
@@ -49,7 +139,34 @@ router.post('/register', authLimiter, sellerRegisterValidators, validate, async 
       token_expires_at:    null,
       token_duration_hours:null,
     });
+
+    // ── Affiliate referral tracking ────────────────────────────────────
+    // A missing/unknown/banned code is silently ignored rather than
+    // blocking registration — the referral link is a marketing nicety,
+    // never a requirement to sign up. See models/Affiliate.js and
+    // models/AffiliateReferral.js; the actual commission is credited
+    // later, when this seller upgrades a plan (routes/payments.js).
+    let referringAffiliate = null;
+    if (referralCode) {
+      referringAffiliate = await Affiliate.findOne({
+        referralCode: String(referralCode).trim().toUpperCase(),
+        status: 'active',
+      });
+      if (referringAffiliate) seller.referredByAffiliate = referringAffiliate._id;
+    }
+
     await seller.save();
+
+    if (referringAffiliate) {
+      try {
+        await AffiliateReferral.create({ affiliate: referringAffiliate._id, seller: seller._id });
+      } catch (err) {
+        // A duplicate key here (seller already has a referral row) can't
+        // actually happen on a brand-new seller, but don't let a stray
+        // error here fail the whole registration either way.
+        console.error('Failed to create affiliate referral record:', err.message);
+      }
+    }
 
     // Invalidate sellers cache so admin panel shows the new pending seller
     await cache.delPrefix('sellers:');

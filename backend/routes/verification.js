@@ -1,78 +1,64 @@
 import express from 'express';
+import { body } from 'express-validator';
 import Seller from '../models/Seller.js';
-import { protect, protectSeller } from '../middleware/auth.js';
+import { protect, protectSeller, requirePermission } from '../middleware/auth.js';
 import { writeLimiter } from '../middleware/rateLimiter.js';
-import { ninSubmitValidators, ninReviewValidators } from '../middleware/validators.js';
+import { ninReviewValidators } from '../middleware/validators.js';
 import { validate } from '../middleware/validate.js';
 import { logActivity } from '../utils/activityLog.js';
 import { createNotification } from '../utils/notify.js';
-import { verifyNIN } from '../utils/ninProvider.js';
 import cache from '../utils/cache.js';
 
 const router = express.Router();
 
 /**
- * POST /api/verification/nin — seller submits their NIN for the verified badge.
+ * Seller verification, human-review only — NO third-party identity API.
  *
- * Flow: seller submits -> we call the configured NIN verification provider
- * (utils/ninProvider.js) to validate the number is real and (where the
- * provider supports it) matches the seller's registered name -> we store
- * the result and set ninStatus accordingly. If the provider only confirms
- * "this NIN exists" without a fraud/identity check, we still route through
- * a `pending` state so an admin can do a final manual review before the
- * badge goes live — see /api/verification/nin/:id/review below.
+ * A seller submits: their full legal name, their NIN, and a photo (of
+ * themselves holding their ID, or the ID itself). That's it — nothing is
+ * sent to any outside verification service. It goes straight into a
+ * `pending` queue that only an admin can see (ninFullName/ninPhoto/nin
+ * are `select: false` on the Seller model, so they never leak into any
+ * public API response), and the verified badge only appears once an
+ * admin has manually looked at the submission and approved it via
+ * PATCH /nin/:id/review below.
  */
-router.post('/nin', protectSeller, writeLimiter, ninSubmitValidators, validate, async (req, res) => {
-  try {
-    const { nin } = req.body;
-    const seller = await Seller.findById(req.seller.id).select('+nin store_name username ninStatus');
-    if (!seller) return res.status(404).json({ success: false, message: 'Seller not found' });
-
-    if (seller.ninStatus === 'verified') {
-      return res.status(400).json({ success: false, message: 'Your store is already verified' });
-    }
-
-    let providerResult;
+router.post('/nin', protectSeller, writeLimiter,
+  body('nin').trim().matches(/^\d{11}$/).withMessage('NIN must be exactly 11 digits'),
+  body('fullName').trim().isLength({ min: 3, max: 150 }).withMessage('Enter your full legal name as it appears on your ID'),
+  body('photo').trim().notEmpty().withMessage('A photo is required for verification'),
+  validate,
+  async (req, res) => {
     try {
-      providerResult = await verifyNIN({ nin, fullName: seller.store_name });
-    } catch (err) {
-      console.error('NIN provider error:', err.message);
-      return res.status(502).json({
-        success: false,
-        message: 'Could not reach the verification service right now. Please try again shortly.',
-      });
-    }
+      const { nin, fullName, photo } = req.body;
+      const seller = await Seller.findById(req.seller.id).select('+nin +ninFullName +ninPhoto ninStatus store_name username');
+      if (!seller) return res.status(404).json({ success: false, message: 'Seller not found' });
 
-    if (providerResult.status === 'invalid') {
-      seller.ninStatus = 'rejected';
-      seller.ninRejectionReason = providerResult.reason || 'NIN could not be validated';
+      if (seller.ninStatus === 'verified') {
+        return res.status(400).json({ success: false, message: 'Your store is already verified' });
+      }
+
+      seller.nin = nin;
+      seller.ninFullName = fullName;
+      seller.ninPhoto = photo;
+      seller.ninStatus = 'pending';
+      seller.ninRejectionReason = '';
       await seller.save();
-      await logActivity({ type: 'nin_rejected', seller: seller._id, meta: { reason: seller.ninRejectionReason } });
-      return res.status(400).json({ success: false, message: seller.ninRejectionReason });
+
+      await logActivity({ type: 'nin_submitted', seller: seller._id });
+      await cache.delPrefix('sellers:');
+      await cache.del(`seller:${seller._id}`);
+
+      res.json({
+        success: true,
+        message: 'Submitted for review. An admin will manually check your details and photo — this usually takes 1-2 business days.',
+        ninStatus: seller.ninStatus,
+      });
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
     }
-
-    // Provider confirmed the NIN is real. We still hold in "pending" for a
-    // human admin to give final sign-off before showing a public trust badge —
-    // this avoids the badge being granted purely on an automated check.
-    seller.nin = nin;
-    seller.ninProviderRef = providerResult.reference || '';
-    seller.ninStatus = 'pending';
-    seller.ninRejectionReason = '';
-    await seller.save();
-
-    await logActivity({ type: 'nin_submitted', seller: seller._id });
-    await cache.delPrefix('sellers:');
-    await cache.del(`seller:${seller._id}`);
-
-    res.json({
-      success: true,
-      message: 'NIN submitted. Your verified badge will appear once admin completes final review.',
-      ninStatus: seller.ninStatus,
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
   }
-});
+);
 
 // GET /api/verification/nin/status — seller checks their own verification status
 router.get('/nin/status', protectSeller, async (req, res) => {
@@ -85,11 +71,13 @@ router.get('/nin/status', protectSeller, async (req, res) => {
   }
 });
 
-// GET /api/verification/nin/pending — admin: list sellers awaiting review
-router.get('/nin/pending', protect, async (req, res) => {
+// GET /api/verification/nin/pending — admin: queue of submissions awaiting
+// manual review, including the full name, NIN and photo the seller
+// submitted (only ever exposed to an authenticated admin, never publicly).
+router.get('/nin/pending', protect, requirePermission('verification.review'), async (req, res) => {
   try {
     const sellers = await Seller.find({ ninStatus: 'pending' })
-      .select('store_name username email ninStatus createdAt')
+      .select('+nin +ninFullName +ninPhoto store_name username email ninStatus createdAt')
       .sort({ createdAt: 1 });
     res.json({ success: true, sellers });
   } catch (err) {
@@ -97,8 +85,8 @@ router.get('/nin/pending', protect, async (req, res) => {
   }
 });
 
-// PATCH /api/verification/nin/:id/review — admin approves or rejects
-router.patch('/nin/:id/review', protect, writeLimiter, ninReviewValidators, validate, async (req, res) => {
+// PATCH /api/verification/nin/:id/review — admin manually approves or rejects
+router.patch('/nin/:id/review', protect, requirePermission('verification.review'), writeLimiter, ninReviewValidators, validate, async (req, res) => {
   try {
     const { status, rejectionReason } = req.body;
     const seller = await Seller.findById(req.params.id);
