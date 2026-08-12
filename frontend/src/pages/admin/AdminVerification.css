@@ -13,6 +13,11 @@
 }
 
 .admin-verification-name { font-weight: 700; font-size: 0.95rem; }
+.admin-verification-photo {
+  width: 72px; height: 72px; border-radius: 10px; object-fit: cover;
+  flex-shrink: 0; border: 1px solid #eee; cursor: zoom-in;
+}
+@media (max-width: 500px) { .admin-verification-photo { width: 100%; height: 160px; } }
 .admin-verification-meta {
   font-size: 0.78rem;
   color: var(--ink-muted);

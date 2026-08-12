@@ -1,12 +1,16 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Star, Phone, Globe, Instagram, ArrowLeft, Package, X, ZoomIn, MapPin, BadgeCheck } from 'lucide-react';
+import { Star, Phone, Globe, ArrowLeft, Package, X, ZoomIn, MapPin, BadgeCheck, MessageCircle, Pin } from 'lucide-react';
+import RateSellerModal from '../../components/shared/RateSellerModal';
 import Navbar from '../../components/shared/Navbar';
-import Footer from '../../components/shared/Footer';
 import ProductCard from '../../components/public/ProductCard';
+import SafetyBanner from '../../components/shared/SafetyBanner';
+import { useBuyerAuth } from '../../context/BuyerAuthContext';
+import { useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import { CATEGORY_ICONS } from '../../utils/constants';
 import { trackView } from '../../utils/trackView';
+import { setPendingChatIntent } from '../../utils/pendingChat';
 import OptimizedImage from '../../components/shared/OptimizedImage';
 import './SellerDetailPage.css';
 
@@ -28,7 +32,7 @@ const Stars = ({ rating }) => (
     {[1,2,3,4,5].map(i => (
       <Star key={i} size={16} fill={i <= Math.round(rating) ? 'currentColor' : 'none'} strokeWidth={1.5} />
     ))}
-    <span style={{ marginLeft: '0.35rem', fontWeight: 600 }}>{rating?.toFixed(1)}</span>
+    <span className="sd-rating-value">{rating?.toFixed(1)}</span>
   </div>
 );
 
@@ -58,33 +62,83 @@ const ImageLightbox = ({ src, alt, onClose }) => {
 
 const SellerDetailPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useBuyerAuth();
   const [seller, setSeller] = useState(null);
+  const [sellerInfo, setSellerInfo] = useState(null);
   const [products, setProducts] = useState([]);
+  const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState('All');
   const [lightbox, setLightbox] = useState(null);
+  const [showReviews, setShowReviews] = useState(false);
+  const [reviewsPage, setReviewsPage] = useState(1);
+  const [reviewsPagination, setReviewsPagination] = useState(null);
+  const [loadingMoreReviews, setLoadingMoreReviews] = useState(false);
+  const [showRateModal, setShowRateModal] = useState(false);
 
   const openLightbox = useCallback((src, alt) => setLightbox({ src, alt }), []);
   const closeLightbox = useCallback(() => setLightbox(null), []);
+
+  const handleStartChat = async () => {
+    if (!isAuthenticated) {
+      setPendingChatIntent({ sellerId: seller._id });
+      navigate('/buyer/login');
+      return;
+    }
+    try {
+      await api.post('/messages/conversations', { sellerId: seller._id }, { authRole: 'buyer' });
+      navigate('/buyer/dashboard');
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const loadReviews = useCallback((sellerId) => {
+    if (!sellerId) return;
+    api.get(`/reviews/seller/${sellerId}`, { params: { page: 1, limit: 6 } })
+      .then(r => {
+        setReviews(r.data.reviews || []);
+        setReviewsPagination(r.data.pagination || null);
+        setReviewsPage(1);
+      })
+      .catch(() => {});
+  }, []);
+
+  const loadMoreReviews = async () => {
+    if (!seller?._id) return;
+    setLoadingMoreReviews(true);
+    try {
+      const nextPage = reviewsPage + 1;
+      const res = await api.get(`/reviews/seller/${seller._id}`, { params: { page: nextPage, limit: 6 } });
+      setReviews(prev => [...prev, ...(res.data.reviews || [])]);
+      setReviewsPagination(res.data.pagination);
+      setReviewsPage(nextPage);
+    } catch (err) {
+      console.error(err);
+    } finally { setLoadingMoreReviews(false); }
+  };
 
   useEffect(() => {
     api.get(`/sellers/user/${id}`)
       .then(res => {
         setSeller(res.data.seller);
         setProducts(res.data.products);
+        setSellerInfo(res.data.sellerInfo || null);
         // Count this as a store view. Backend already skips counting a
         // seller viewing their own store (checked via their auth token),
         // so this is safe to fire unconditionally here.
         trackView(res.data.seller?._id, 'store_view');
+        loadReviews(res.data.seller?._id);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, loadReviews]);
 
   if (loading) return (
     <>
       <Navbar />
-      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="sd-state-screen">
         <div className="spinner" />
       </div>
     </>
@@ -93,7 +147,7 @@ const SellerDetailPage = () => {
   if (!seller) return (
     <>
       <Navbar />
-      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem' }}>
+      <div className="sd-state-screen sd-state-screen--column">
         <h2>Seller not found</h2>
         <Link to="/sellers" className="btn btn-primary">Back to Sellers</Link>
       </div>
@@ -102,137 +156,172 @@ const SellerDetailPage = () => {
 
   const categories = ['All', ...new Set(products.map(p => p.category))];
   const filtered = category === 'All' ? products : products.filter(p => p.category === category);
+  // "Edit Store" theme, set by the seller from the dashboard's store
+  // editor (StoreEditorPanel.jsx → PUT /sellers/store/theme). This is
+  // what actually makes those settings show up here instead of just
+  // being saved and never displayed.
+  const theme = seller.storeTheme || {};
 
   return (
     <>
       <Navbar />
-      <div className="seller-detail">
+      <div
+        className={`seller-detail ${theme.darkMode ? 'sd-dark-store' : ''}`}
+        style={theme.primaryColor ? { '--gold': theme.primaryColor } : undefined}
+      >
 
-       
-               {/* Banner — overlay uses pointer-events:none so clicks reach the button */}
-               <div className="seller-detail-banner">
-                 {seller.banner ? (
-                   <>
-                     <img src={seller.banner} alt={seller.store_name} />
-                     {/* Overlay is purely visual, non-blocking */}
-                     <div className="seller-detail-banner-overlay" style={{ pointerEvents: 'none' }} />
-                     {/* Click trigger sits on top of everything */}
-                     <button
-                       className="banner-lightbox-trigger"
-                       onClick={() => openLightbox(seller.banner, seller.store_name)}
-                       aria-label="View banner image"
-                     >
-                       <span className="image-zoom-hint">
-                         <ZoomIn size={18} />
-                         View
-                       </span>
-                     </button>
-                   </>
-                 ) : (
-                   <div className="seller-detail-banner-placeholder">
-                     <span>{CATEGORY_ICONS[seller.category] || '🏪'}</span>
-                   </div>
-                 )}
-               </div>
+        {/* Banner — overlay uses pointer-events:none so clicks reach the button */}
+        <div className="sd-banner">
+          {seller.banner ? (
+            <>
+              <img src={seller.banner} alt={seller.store_name} />
+              {/* Overlay is purely visual, non-blocking */}
+              <div className="sd-banner-overlay" style={{ pointerEvents: 'none' }} />
+              {/* Click trigger sits on top of everything */}
+              <button
+                className="banner-lightbox-trigger"
+                onClick={() => openLightbox(seller.banner, seller.store_name)}
+                aria-label="View banner image"
+              >
+                <span className="image-zoom-hint">
+                  <ZoomIn size={18} />
+                  View
+                </span>
+              </button>
+            </>
+          ) : (
+            <div className="sd-banner-placeholder">
+              <span>{CATEGORY_ICONS[seller.category] || '🏪'}</span>
+            </div>
+          )}
+          {(theme.bannerHeadline || theme.bannerSubtext) && (
+            <div className="sd-banner-text" style={{ pointerEvents: 'none' }}>
+              {theme.bannerHeadline && <h2>{theme.bannerHeadline}</h2>}
+              {theme.bannerSubtext && <p>{theme.bannerSubtext}</p>}
+            </div>
+          )}
+          <Link to="/sellers" className="sd-back-btn">
+            <ArrowLeft size={15} /> Sellers
+          </Link>
+        </div>
 
-        {/* Profile section */}
+        {/* Floating profile card — overlaps the bottom of the banner */}
         <div className="container">
-          <div className="seller-detail-profile">
-
-            {/* Avatar */}
-            <div className="seller-detail-avatar">
-              {seller.profile_picture ? (
-                <button
-                  className="avatar-lightbox-trigger"
-                  onClick={() => openLightbox(seller.profile_picture, seller.username)}
-                  aria-label="View profile picture"
-                >
-                  <OptimizedImage src={seller.profile_picture} alt={seller.username} width={160} height={160} priority />
-                  <span className="avatar-zoom-hint">
-                    <ZoomIn size={16} />
-                  </span>
-                </button>
-              ) : (
-                <span>{seller.store_name?.[0]?.toUpperCase()}</span>
-              )}
-            </div>
-
-            <div className="seller-detail-info">
-              <div className="seller-detail-meta">
-                <span className="badge badge-gold">{seller.category}</span>
-                <Stars rating={seller.rating || 0} />
-              </div>
-              <h1 className="seller-detail-name">
-                {seller.store_name}
-                {seller.ninStatus === 'verified' && (
-                  <span className="seller-card-verified" title="This seller has completed NIN + face verification">
-            <BadgeCheck size={12} /> Verified
-          </span>
-                  // <BadgeCheck size={20} style={{ color: '#1ebe5d', verticalAlign: 'middle', marginLeft: '0.35rem' }} title="Verified seller" />
+          <div className="sd-profile-card">
+            <div className="sd-profile-top">
+              <div className="sd-avatar">
+                {seller.profile_picture ? (
+                  <button
+                    className="avatar-lightbox-trigger"
+                    onClick={() => openLightbox(seller.profile_picture, seller.username)}
+                    aria-label="View profile picture"
+                  >
+                    <OptimizedImage src={seller.profile_picture} alt={seller.username} width={160} height={160} priority />
+                    <span className="avatar-zoom-hint">
+                      <ZoomIn size={16} />
+                    </span>
+                  </button>
+                ) : (
+                  <span>{seller.store_name?.[0]?.toUpperCase()}</span>
                 )}
-              </h1>
-              <p className="seller-detail-username">@{seller.username}</p>
-              {(seller.city || seller.state) && (
-                <p className="seller-detail-username" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                  <MapPin size={14} />
-                  {seller.city ? `${seller.city}, ${seller.state}` : seller.state}
-                </p>
-              )}
-              {seller.description && <p className="seller-detail-desc">{seller.description} </p>}
+              </div>
+
+              <div className="sd-heading">
+                <h1 className="sd-name">
+                  {seller.store_name}
+                  {seller.ninStatus === 'verified' && (
+                    <span className="sd-verified-pill" title="This seller has completed NIN + face verification">
+                      <BadgeCheck size={12} /> Verified
+                    </span>
+                  )}
+                </h1>
+                <div className="sd-subline">
+                  <span>@{seller.username}</span>
+                  {(seller.city || seller.state) && (
+                    <span className="sd-location-line">
+                      <MapPin size={13} />
+                      {seller.city ? `${seller.city}, ${seller.state}` : seller.state}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="sd-stat-strip">
+                <div className="sd-stat">
+                  <Stars rating={seller.rating || 0} />
+                  <span className="sd-stat-label">Rating</span>
+                </div>
+                <div className="sd-stat-divider" />
+                <div className="sd-stat">
+                  <span className="sd-stat-value">{products.length}</span>
+                  <span className="sd-stat-label">Products</span>
+                </div>
+                <div className="sd-stat-divider" />
+                <span className="badge badge-gold sd-category-badge">{seller.category}</span>
+              </div>
             </div>
 
-            <div className="seller-detail-contacts">
-              {seller.contact && (
-                <a href={`tel:${seller.contact}`} className="contact-item">
-                  <Phone size={16} />
-                  <span>{seller.contact}</span>
-                </a>
-              )}
+            {seller.description && <p className="sd-desc">{seller.description}</p>}
+
+            <div className="sd-contact-row">
+              <button onClick={handleStartChat} className="sd-pill sd-pill--primary">
+                <MessageCircle size={15} />
+                <span>Start Chat</span>
+              </button>
               {seller.whatsapp && (
                 <a
                   href={`https://wa.me/234${seller.whatsapp.replace(/\D/g,'')}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="contact-item wa-contact"
+                  className="sd-pill sd-pill--wa"
                   onClick={() => trackView(seller._id, 'whatsapp_click')}
                 >
                   <WhatsAppIcon />
                   <span>WhatsApp</span>
                 </a>
               )}
+              {seller.contact && (
+                <a href={`tel:${seller.contact}`} className="sd-pill">
+                  <Phone size={15} />
+                  <span>{seller.contact}</span>
+                </a>
+              )}
               {seller.website && (
-                <a href={`https://${seller.website}`} target="_blank" className="contact-item">
-                  <Globe size={16} />
+                <a href={`https://${seller.website}`} target="_blank" rel="noreferrer" className="sd-pill">
+                  <Globe size={15} />
                   <span>Website</span>
                 </a>
               )}
               {seller.social_media_handle && (
-                <a href={`https://tiktok.com/@${seller.social_media_handle}`} target="_blank" rel="noreferrer" className="contact-item">
+                <a href={`https://tiktok.com/@${seller.social_media_handle}`} target="_blank" rel="noreferrer" className="sd-pill">
                   <TikTokIcon />
                   <span>{seller.social_media_handle}</span>
                 </a>
               )}
+              <button onClick={() => (isAuthenticated ? setShowRateModal(true) : navigate('/buyer/login'))} className="sd-pill">
+                <Star size={15} />
+                <span>Rate Seller</span>
+              </button>
             </div>
+
+            <SafetyBanner compact />
           </div>
         </div>
 
         {/* Products */}
-        <div className="container" style={{ paddingBottom: '4rem' }}>
+        <div className="container sd-products-section">
           <div className="seller-products-header">
             <div>
               <h2>Products <span className="products-count">{products.length}</span></h2>
             </div>
-            <Link to="/sellers" className="btn btn-outline btn-sm">
-              <ArrowLeft size={14} /> Back to Sellers
-            </Link>
           </div>
 
           {categories.length > 1 && (
-            <div className="category-pills" style={{ marginBottom: '1.5rem' }}>
+            <div className="sd-chip-row">
               {categories.map(cat => (
                 <button
                   key={cat}
-                  className={`category-pill ${category === cat ? 'active' : ''}`}
+                  className={`sd-chip ${category === cat ? 'is-active' : ''}`}
                   onClick={() => setCategory(cat)}
                 >
                   {cat !== 'All' && <span>{CATEGORY_ICONS[cat]}</span>}
@@ -248,12 +337,70 @@ const SellerDetailPage = () => {
               <p>No products in this category.</p>
             </div>
           ) : (
-            <div className="grid-2 fade-up">
-              {filtered.map(p => <ProductCard key={p._id} product={p} />)}
+            <div className={theme.layout === 'list' ? 'sd-store-list fade-up' : 'grid-2 fade-up'}>
+              {filtered.map(p => (
+                <div key={p._id} className="sd-product-slot">
+                  {seller.pinnedProducts?.some(pid => (pid._id || pid).toString() === p._id) && (
+                    <span className="badge badge-gold sd-pinned-badge">
+                      <Pin size={11} /> Pinned
+                    </span>
+                  )}
+                  <ProductCard product={p} />
+                </div>
+              ))}
             </div>
           )}
+
+          <div className="sd-reviews-section">
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={() => setShowReviews(v => !v)}
+            >
+              <Star size={14} /> {showReviews ? 'Hide Reviews' : `See Reviews${sellerInfo?.reviewCount ? ` (${sellerInfo.reviewCount})` : ''}`}
+            </button>
+
+            {showReviews && (
+              reviews.length === 0 ? (
+                <p className="sd-no-reviews">No reviews yet — be the first to rate this seller.</p>
+              ) : (
+                <>
+                  <div className="grid-2 sd-reviews-grid">
+                    {reviews.map(r => (
+                      <div key={r._id} className="card sd-review-card">
+                        <div className="sd-review-head">
+                          <strong>{r.buyer?.name || 'Buyer'}</strong>
+                          <span className="sd-review-stars">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                        </div>
+                        {r.comment && <p className="sd-review-comment">{r.comment}</p>}
+                        {r.sellerReply && (
+                          <p className="sd-review-reply">
+                            <strong>Seller reply:</strong> {r.sellerReply}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {reviewsPagination && reviewsPage < reviewsPagination.totalPages && (
+                    <div className="sd-load-more-wrap">
+                      <button className="btn btn-outline btn-sm" onClick={loadMoreReviews} disabled={loadingMoreReviews}>
+                        {loadingMoreReviews ? 'Loading…' : `Load More (${reviewsPagination.total - reviews.length} more)`}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )
+            )}
+          </div>
         </div>
       </div>
+
+      {showRateModal && (
+        <RateSellerModal
+          sellerId={seller._id}
+          onClose={() => setShowRateModal(false)}
+          onSubmitted={() => loadReviews(seller._id)}
+        />
+      )}
 
       {lightbox && (
         <ImageLightbox
@@ -262,8 +409,6 @@ const SellerDetailPage = () => {
           onClose={closeLightbox}
         />
       )}
-
-      
     </>
   );
 };

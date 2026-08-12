@@ -1,14 +1,15 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, Loader2, MapPin } from 'lucide-react';
+import { Search, SlidersHorizontal, Loader2, MapPin, Store, ChevronRight } from 'lucide-react';
 import Navbar from '../../components/shared/Navbar';
 import Footer from '../../components/shared/Footer';
 import SellerCard from '../../components/public/SellerCard';
 import api from '../../utils/api';
 import fCache from '../../utils/frontendCache';
-import { CATEGORIES, SELLER_SORT_OPTIONS, CATEGORY_ICONS } from '../../utils/constants';
+import { CATEGORIES, SELLER_SORT_OPTIONS, CATEGORY_ICONS, CATEGORY_ICONS_F } from '../../utils/constants';
 import { NIGERIA_STATES, NIGERIA_CITIES_BY_STATE } from '../../utils/nigeriaLocations';
 import { useUserLocation } from '../../hooks/useUserLocation';
+import './SellersPage.css';
 import './SellersPage.css';
 
 const LIMIT = 12;
@@ -217,151 +218,151 @@ const SellersPage = () => {
   return (
     <>
       <Navbar />
-      <div className="page-header">
-        <div className="container">
-          <p className="section-eyebrow" style={{ color: 'var(--gold)', marginBottom: '0.5rem' }}>
-            Buyonuma
-          </p>
-          <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '2.5rem', color: 'var(--white)', marginBottom: '0.5rem' }}>
-            Our Sellers
-          </h1>
-          <p style={{ color: 'var(--font)', fontSize: '0.95rem' }}>
-            {total !== null
-              ? `Discover ${total} curated seller${total !== 1 ? 's' : ''}`
-              : 'Loading sellers…'}
-          </p>
-        </div>
-      </div>
 
-      <div className="container" style={{ padding: '3rem 2rem' }}>
-        {/* Filters */}
-        <div className="filters-bar">
-          <form className="search-form" onSubmit={handleSearch}>
-            <Search size={16} />
+      {/* ── Hero ── */}
+      <div className="sp-hero">
+        <div className="container">
+          <p className="sp-eyebrow">Buyonuma</p>
+          <h1 className="sp-title">Our Sellers</h1>
+          <p className="sp-subtitle">
+            {total !== null ? `Discover ${total} curated seller${total !== 1 ? 's' : ''}` : 'Loading sellers…'}
+          </p>
+
+          <form className="sp-search" onSubmit={handleSearch}>
+            <Search size={17} className="sp-search-icon" />
             <input
               type="text"
               placeholder="Search sellers..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="search-input"
+              onChange={(e) => setSearch(e.target.value)}
+              className="sp-search-input"
             />
-            <button type="submit" className="btn btn-primary btn-sm">Search</button>
+            <button type="submit" className="sp-search-btn" aria-label="Search">
+              <Search size={15} />
+            </button>
           </form>
-          <div className="filters-right">
-            <div className="filter-group">
-              <SlidersHorizontal size={14} />
-              <select
-                value={sortIdx}
-                onChange={e => handleSortChange(Number(e.target.value))}
-                className="form-control"
-                style={{ width: 'auto' }}
-              >
-                {SELLER_SORT_OPTIONS.map((o, i) => (
-                  <option key={i} value={i}>{o.label}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Manual State / LGA filters — hidden while "Nearest to me" is
-                active since that sort already drives location from
-                auto-detected GPS, and mixing both would be contradictory. */}
-            {!isNearestSort && (
-              <>
-                <div className="filter-group">
-                  <MapPin size={14} />
-                  <select
-                    value={stateFilter}
-                    onChange={(e) => handleStateFilter(e.target.value)}
-                    className="form-control"
-                    style={{ width: 'auto' }}
-                  >
-                    <option value="">All States</option>
-                    {NIGERIA_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div className="filter-group">
-                  <select
-                    value={cityFilter}
-                    onChange={(e) => handleCityFilter(e.target.value)}
-                    className="form-control"
-                    style={{ width: 'auto' }}
-                    disabled={!stateFilter}
-                  >
-                    <option value="">{stateFilter ? 'All LGAs / Cities' : 'Select a state first'}</option>
-                    {cityOptions.map((c) => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-              </>
-            )}
-          </div>
         </div>
-      <p style={{fontSize: "12px"}}>Scroll for categories ➡️</p><br />
-        {/* Category pills */}
-  <div className="category-scroll">
-           {CATEGORIES.map(cat => (
-             <button key={cat}
-               className={`category-chip ${category===cat?'active':''}`}
-               onClick={() => handleCategoryChange(cat)}
-               title={cat}>
-               <span className="category-chip-icon">{CATEGORY_ICONS[cat]}</span>
-               <span className="category-chip-label">{cat}</span>
-             </button>
-           ))}
-         </div>
+      </div>
 
+      <div className="container sp-body">
+        {/* ── Filters bar ── */}
+        <div className="sp-filters">
+          <div className="sp-filter-group">
+            <SlidersHorizontal size={14} />
+            <select
+              value={sortIdx}
+              onChange={(e) => handleSortChange(Number(e.target.value))}
+              className="sp-select"
+            >
+              {SELLER_SORT_OPTIONS.map((o, i) => (
+                <option key={i} value={i}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Manual State / LGA filters — hidden while "Nearest to me" is
+              active since that sort already drives location from
+              auto-detected GPS, and mixing both would be contradictory. */}
+          {!isNearestSort && (
+            <>
+              <div className="sp-filter-group">
+                <MapPin size={14} />
+                <select
+                  value={stateFilter}
+                  onChange={(e) => handleStateFilter(e.target.value)}
+                  className="sp-select"
+                >
+                  <option value="">All States</option>
+                  {NIGERIA_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div className="sp-filter-group">
+                <select
+                  value={cityFilter}
+                  onChange={(e) => handleCityFilter(e.target.value)}
+                  className="sp-select"
+                  disabled={!stateFilter}
+                >
+                  <option value="">{stateFilter ? 'All LGAs / Cities' : 'Select a state first'}</option>
+                  {cityOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── Category chips ── */}
+        <div className="sp-chip-row-wrap">
+          <div className="sp-chip-row">
+            {CATEGORIES.map((cat) => {
+          const Icon = CATEGORY_ICONS_F[cat];
+          return (
+            <button
+              key={cat}
+              className={`pp-chip ${category === cat ? 'is-active' : ''}`}
+              onClick={() => handleCategoryChange(cat)}
+              title={cat}
+            >
+              <span className="pp-chip-icon"><Icon size={16} strokeWidth={2} /></span>
+              <span className="pp-chip-label">{cat}</span>
+            </button>
+          );
+        })}
+          </div>
+          <span className="sp-scroll-hint">
+            <ChevronRight size={13} />
+          </span>
+        </div>
+
+        {/* ── Location status ── */}
         {isNearestSort && (
-          <div style={{ display:'flex', alignItems:'center', gap:'0.4rem', fontSize:'0.8rem', color:'var(--ink-muted)', margin:'0.5rem 0' }}>
+          <div className="sp-location-banner">
             <MapPin size={14} />
             {geoStatus === 'locating' && <span>Detecting your location…</span>}
             {geoStatus === 'done' && userLocation?.state && (
               <span>Showing sellers nearest to {userLocation.city ? `${userLocation.city}, ` : ''}{userLocation.state}</span>
             )}
             {(geoStatus === 'denied' || geoStatus === 'error') && (
-              <span>{geoError} <button onClick={detect} style={{ background:'none', border:'none', color:'var(--gold)', cursor:'pointer', textDecoration:'underline', padding:0 }}>Try again</button></span>
+              <span>{geoError} <button onClick={detect} className="sp-link-btn">Try again</button></span>
             )}
           </div>
         )}
 
         {!isNearestSort && (stateFilter || cityFilter) && (
-          <div style={{ display:'flex', alignItems:'center', gap:'0.4rem', fontSize:'0.8rem', color:'var(--ink-muted)', margin:'0.5rem 0' }}>
+          <div className="sp-location-banner">
             <MapPin size={14} />
             <span>Showing sellers in {cityFilter ? `${cityFilter}, ` : ''}{stateFilter}</span>
-            <button
-              onClick={() => handleStateFilter('')}
-              style={{ background:'none', border:'none', color:'var(--gold)', cursor:'pointer', textDecoration:'underline', padding:0 }}
-            >
-              Clear
-            </button>
+            <button onClick={() => handleStateFilter('')} className="sp-link-btn">Clear</button>
           </div>
         )}
 
         {/* Results count */}
         {total !== null && !loadingInit && (
-          <p className="results-count">
-            {total} seller{total !== 1 ? 's' : ''} found
-          </p>
+          <p className="sp-results-count">{total} seller{total !== 1 ? 's' : ''} found</p>
         )}
 
         {/* Skeleton */}
         {loadingInit && (
-          <div className="grid-4">
+          <div className="grid-4 seller-grid">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="skeleton-card" />
+              <div key={i} className="pp-skeleton-card" />
             ))}
           </div>
         )}
 
         {/* Empty */}
         {!loadingInit && sellers.length === 0 && (
-          <div className="empty-state">
-            <p>No sellers found. Try a different search or category.</p>
+          <div className="sp-empty-state">
+            <Store size={34} />
+            <p>No sellers found</p>
+            <span>Try a different search term or category.</span>
           </div>
         )}
 
         {/* Cards */}
         {sellers.length > 0 && (
-          <div className="grid-4">
-            {sellers.map(s => <SellerCard key={s._id} seller={s} />)}
+          <div className="grid-4 seller-grid">
+            {sellers.map((s) => <SellerCard key={s._id} seller={s} />)}
           </div>
         )}
 
@@ -370,19 +371,17 @@ const SellersPage = () => {
 
         {/* Loading more */}
         {loadingMore && (
-          <div className="infinite-loading">
-            <Loader2 size={22} className="spinning" />
+          <div className="sp-loadmore">
+            <Loader2 size={18} className="spinning" />
             <span>Loading more sellers…</span>
           </div>
         )}
 
         {/* End */}
         {!hasMoreRef.current && sellers.length > 0 && !loadingMore && (
-          <p className="end-of-results">— You've seen all {total} sellers —</p>
+          <p className="sp-end">— You've seen all {total} sellers —</p>
         )}
       </div>
-
-     
     </>
   );
 };

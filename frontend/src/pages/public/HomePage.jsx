@@ -71,13 +71,13 @@ const HomePage = () => {
           <div className="hero-bg-pattern" />
           <div className="container hero-content">
              <div className="hero-eyebrow"><Star size={14} fill="currentColor" /><span>Universal Market Access </span></div>
-                     <h1 style={{'color':'white'}} className="hero-title">Discover, Shop &amp; <br /><span className="hero-title-accent">Sell Anywhere</span></h1>
+                     <h1 className="hero-title">Discover, Shop &amp; <br /><span className="hero-title-accent">Sell Anywhere</span></h1>
                      <p className="hero-desc">BuyOnUma — Universal Market Access. Browse curated sellers, unique products, and services from a growing community of buyers and sellers everywhere.</p>
             <div className="hero-actions">
               <Link to="/" className="btn btn-gold btn-lg">
                 Browse Products <ArrowRight size={18} />
               </Link>
-              <Link to="/sellers" style={{"color": "var(--font)", "background-color":"black"}} className=" btn-outline-one btn-lg">
+              <Link to="/sellers" className="btn btn-outline-invert btn-lg">
                 Meet Sellers
               </Link>
             </div>
@@ -116,7 +116,7 @@ const HomePage = () => {
                 <p>No sellers yet. Check back soon!</p>
               </div>
             ) : (
-              <div className="grid-4 fade-up">
+              <div className="grid-4 grid-mobile-2 fade-up">
                 {sellers.map(s => <SellerCard key={s._id} seller={s} />)}
               </div>
             )}
@@ -129,7 +129,7 @@ const HomePage = () => {
             <div className="container">
               <div className="section-header">
                 <div>
-                  <p className="section-eyebrow" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <p className="section-eyebrow eyebrow-inline">
                     <MapPin size={13} /> Near {userLocation.city ? `${userLocation.city}, ` : ''}{userLocation.state}
                   </p>
                   <h2 className="section-title">Sellers Near You</h2>
@@ -170,7 +170,7 @@ const HomePage = () => {
                 <p>No products yet. Check back soon!</p>
               </div>
             ) : (
-              <div className="grid-2 fade-up">
+              <div className="grid-2 grid-mobile-2 fade-up">
                 {products.map(p => <ProductCard key={p._id} product={p} />)}
               </div>
             )}

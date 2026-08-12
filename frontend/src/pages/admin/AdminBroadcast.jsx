@@ -37,7 +37,7 @@ const AdminBroadcast = () => {
     }
     setEmailSending(true);
     try {
-      const res = await api.post('/broadcast/email', { subject: emailSubject, message: emailMessage, audience: emailAudience });
+      const res = await api.post('/broadcast/admin/email', { subject: emailSubject, message: emailMessage, audience: emailAudience });
       toast.success(res.data.message);
       setEmailSubject('');
       setEmailMessage('');

@@ -1,15 +1,17 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Star, Phone, Globe, Package, X, ZoomIn, MapPin, BadgeCheck, Copy, Check, ExternalLink, Edit3 } from 'lucide-react';
+import { Star, Phone, Globe, Package, X, ZoomIn, MapPin, BadgeCheck, Copy, Check, ExternalLink, Edit3, Pin } from 'lucide-react';
 import SellerLayout from '../../components/seller/SellerLayout';
 import LoadFailedModal from '../../components/seller/LoadFailedModal';
+import StoreEditorPanel from '../../components/seller/StoreEditorPanel';
+import SellerReviewsPanel from '../../components/seller/SellerReviewsPanel';
 import ProductCard from '../../components/public/ProductCard';
 import OptimizedImage from '../../components/shared/OptimizedImage';
 import { useSellerAuth } from '../../context/SellerAuthContext';
 import api from '../../utils/api';
 import { CATEGORY_ICONS } from '../../utils/constants';
 import '../public/SellerDetailPage.css';
-import './SellerDashboard.css';
+//import './SellerDashboard.css';
 
 const TikTokIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="black">
@@ -28,7 +30,7 @@ const Stars = ({ rating }) => (
     {[1,2,3,4,5].map(i => (
       <Star key={i} size={16} fill={i <= Math.round(rating) ? 'currentColor' : 'none'} strokeWidth={1.5} />
     ))}
-    <span style={{ marginLeft: '0.35rem', fontWeight: 600 }}>{(rating || 0).toFixed(1)}</span>
+    <span className="sd-rating-value">{(rating || 0).toFixed(1)}</span>
   </div>
 );
 
@@ -57,12 +59,12 @@ const ImageLightbox = ({ src, alt, onClose }) => {
 };
 
 /* ── Seller's own store, previewed inside the dashboard.
-   Reuses the public SellerDetailPage look, but:
-   - pulls the seller's own data instead of fetching by id
-   - never calls trackView (a seller looking at their own store isn't a "view")
-   - adds a preview banner with copy-link / open-public-page / edit-profile shortcuts */
+   Mirrors the public SellerDetailPage exactly — including the "Edit
+   Store" theme (accent color, banner headline/subtext, grid/list
+   layout) and pinned-product badges — so what a seller sees here is
+   really what a buyer sees on their live page, not an approximation. */
 const SellerStorePreviewPage = () => {
-  const { seller } = useSellerAuth();
+  const { seller, refreshSeller } = useSellerAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -70,6 +72,7 @@ const SellerStorePreviewPage = () => {
   const [category, setCategory] = useState('All');
   const [lightbox, setLightbox] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [showReviews, setShowReviews] = useState(false);
 
   const openLightbox = useCallback((src, alt) => setLightbox({ src, alt }), []);
   const closeLightbox = useCallback(() => setLightbox(null), []);
@@ -83,11 +86,20 @@ const SellerStorePreviewPage = () => {
         setLoadError(true);
       })
       .finally(() => { setLoading(false); setRetrying(false); });
-  }, []);
+  }, [seller?.username]);
 
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   const handleRetry = () => { setRetrying(true); fetchProducts(); };
+
+  // Saving the theme or pins in StoreEditorPanel only updates the
+  // seller's document on the backend — without this, the preview below
+  // (and the plan/pin-limit numbers inside the editor itself) would keep
+  // showing what was true before the save until the next full page load.
+  const handleStoreUpdated = () => {
+    fetchProducts();
+    refreshSeller?.();
+  };
 
   const storeUrl = seller?.username
     ? `${window.location.origin}/${seller.username}`
@@ -108,12 +120,36 @@ const SellerStorePreviewPage = () => {
 
   const categories = ['All', ...new Set(products.map(p => p.category))];
   const filtered = category === 'All' ? products : products.filter(p => p.category === category);
+  // Same "Edit Store" theme object the public page reads — see
+  // StoreEditorPanel.jsx (PUT /sellers/store/theme) for where it's set.
+  const theme = seller.storeTheme || {};
 
   return (
     <SellerLayout title="My Store">
       {loadError && <LoadFailedModal onRetry={handleRetry} retrying={retrying} />}
 
       <div className="seller-dash fade-up">
+        <StoreEditorPanel
+          seller={seller}
+          products={products}
+          onUpdated={handleStoreUpdated}
+        />
+
+        <div className="card" style={{ padding: '1rem', marginBottom: '1rem' }}>
+          <button
+            onClick={() => setShowReviews(v => !v)}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+          >
+            <span style={{color:'var(--ink-light)'}}>⭐ Reviews &amp; Replies</span>
+            <span style={{ fontSize: '0.8rem', color: 'var(--gold)' }}>{showReviews ? 'Hide' : 'Show'}</span>
+          </button>
+          {showReviews && (
+            <div style={{ marginTop: '1rem' }}>
+              <SellerReviewsPanel sellerId={seller?._id} />
+            </div>
+          )}
+        </div>
+
         {/* Preview banner — makes clear this is a dashboard-side preview, not the live page */}
         <div className="dash-alert dash-alert-ok store-preview-banner">
           <div>
@@ -123,7 +159,7 @@ const SellerStorePreviewPage = () => {
           <div className="dash-profile-actions">
             <button
               type="button"
-              style={{color:"black"}} 
+              style={{color:"black"}}
               className="btn btn-outline btn-sm"
               onClick={handleCopyLink}
               disabled={!storeUrl}
@@ -132,8 +168,8 @@ const SellerStorePreviewPage = () => {
               {copied ? <Check size={14} /> : <Copy size={14} />}
               {copied ? 'Copied' : 'Copy Link'}
             </button>
-            <a
-              href={storeUrl || '#'}
+            
+              <a href={storeUrl || '#'}
               target="_blank"
               rel="noreferrer"
               className={`btn btn-gold btn-sm${!storeUrl ? ' btn-disabled' : ''}`}
@@ -147,13 +183,13 @@ const SellerStorePreviewPage = () => {
           </div>
         </div>
 
-        <div className="seller-detail seller-detail--embedded">
-          {/* Banner */}
-          <div className="seller-detail-banner">
+        {/* ── sd-* layout, matching the public SellerDetailPage ── */}
+        <div className={`seller-detail ${theme.darkMode ? 'sd-dark-store' : ''}`} style={theme.primaryColor ? { '--gold': theme.primaryColor } : undefined}>
+          <div className="sd-banner">
             {seller.banner ? (
               <>
                 <img src={seller.banner} alt={seller.store_name} />
-                <div className="seller-detail-banner-overlay" style={{ pointerEvents: 'none' }} />
+                <div className="sd-banner-overlay" style={{ pointerEvents: 'none' }} />
                 <button
                   className="banner-lightbox-trigger"
                   onClick={() => openLightbox(seller.banner, seller.store_name)}
@@ -166,76 +202,97 @@ const SellerStorePreviewPage = () => {
                 </button>
               </>
             ) : (
-              <div className="seller-detail-banner-placeholder">
+              <div className="sd-banner-placeholder">
                 <span>{CATEGORY_ICONS[seller.category] || '🏪'}</span>
+              </div>
+            )}
+            {(theme.bannerHeadline || theme.bannerSubtext) && (
+              <div className="sd-banner-text" style={{ pointerEvents: 'none' }}>
+                {theme.bannerHeadline && <h2>{theme.bannerHeadline}</h2>}
+                {theme.bannerSubtext && <p>{theme.bannerSubtext}</p>}
               </div>
             )}
           </div>
 
-          {/* Profile section */}
+          {/* Floating profile card — overlaps the bottom of the banner */}
           <div className="container">
-            <div className="seller-detail-profile">
-              <div className="seller-detail-avatar">
-                {seller.profile_picture ? (
-                  <button
-                    className="avatar-lightbox-trigger"
-                    onClick={() => openLightbox(seller.profile_picture, seller.username)}
-                    aria-label="View profile picture"
-                  >
-                    <OptimizedImage src={seller.profile_picture} alt={seller.username} width={160} height={160} priority />
-                    <span className="avatar-zoom-hint">
-                      <ZoomIn size={16} />
-                    </span>
-                  </button>
-                ) : (
-                  <span>{seller.store_name?.[0]?.toUpperCase()}</span>
-                )}
-              </div>
-
-              <div className="seller-detail-info">
-                <div className="seller-detail-meta">
-                  <span className="badge badge-gold">{seller.category}</span>
-                  <Stars rating={seller.rating || 0} />
-                </div>
-                <h1 className="seller-detail-name">
-                  {seller.store_name}
-                  {seller.ninStatus === 'verified' && (
-                    <span className="seller-card-verified" title="This seller has completed NIN + face verification">
-                      <BadgeCheck size={12} /> Verified
-                    </span>
+            <div className="sd-profile-card">
+              <div className="sd-profile-top">
+                <div className="sd-avatar">
+                  {seller.profile_picture ? (
+                    <button
+                      className="avatar-lightbox-trigger"
+                      onClick={() => openLightbox(seller.profile_picture, seller.username)}
+                      aria-label="View profile picture"
+                    >
+                      <OptimizedImage src={seller.profile_picture} alt={seller.username} width={160} height={160} priority />
+                      <span className="avatar-zoom-hint">
+                        <ZoomIn size={16} />
+                      </span>
+                    </button>
+                  ) : (
+                    <span>{seller.store_name?.[0]?.toUpperCase()}</span>
                   )}
-                </h1>
-                <p className="seller-detail-username">@{seller.username}</p>
-                {(seller.city || seller.state) && (
-                  <p className="seller-detail-username" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                    <MapPin size={14} />
-                    {seller.city ? `${seller.city}, ${seller.state}` : seller.state}
-                  </p>
-                )}
-                {seller.description && <p className="seller-detail-desc">{seller.description}</p>}
+                </div>
+
+                <div className="sd-heading">
+                  <h1 className="sd-name" style={{color: 'var(--ink-light)'}}>
+                    {seller.store_name} 
+                    {seller.ninStatus === 'verified' && (
+                      <span className="sd-verified-pill" title="This seller has completed NIN + face verification">
+                        <BadgeCheck size={12} /> Verified
+                      </span>
+                    )}
+                  </h1>
+                  <div className="sd-subline">
+                    <span>@{seller.username}</span>
+                    {(seller.city || seller.state) && (
+                      <span className="sd-location-line">
+                        <MapPin size={13} />
+                        {seller.city ? `${seller.city}, ${seller.state}` : seller.state}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="sd-stat-strip">
+                  <div className="sd-stat">
+                    <Stars rating={seller.rating || 0} />
+                    <span className="sd-stat-label">Rating</span>
+                  </div>
+                  <div className="sd-stat-divider" />
+                  <div className="sd-stat">
+                    <span className="sd-stat-value" style={{color: 'var(--ink-light)'}}>{loading ? '—' : products.length}</span>
+                    <span className="sd-stat-label" >Products</span>
+                  </div>
+                  <div className="sd-stat-divider" />
+                  <span className="badge badge-gold sd-category-badge">{seller.category}</span>
+                </div>
               </div>
 
-              <div className="seller-detail-contacts">
+              {seller.description && <p className="sd-desc">{seller.description}</p>}
+
+              <div className="sd-contact-row">
                 {seller.contact && (
-                  <a href={`tel:${seller.contact}`} className="contact-item">
-                    <Phone size={16} />
+                  <a href={`tel:${seller.contact}`} className="sd-pill" style={{color: 'var(--ink-light)'}}>
+                    <Phone size={15} />
                     <span>{seller.contact}</span>
                   </a>
                 )}
                 {seller.whatsapp && (
-                  <span className="contact-item wa-contact">
+                  <span className="sd-pill sd-pill--wa">
                     <WhatsAppIcon />
                     <span>WhatsApp</span>
                   </span>
                 )}
                 {seller.website && (
-                  <a href={`https://${seller.website}`} target="_blank" rel="noreferrer" className="contact-item">
-                    <Globe size={16} />
+                  <a href={`https://${seller.website}`} target="_blank" rel="noreferrer" className="sd-pill">
+                    <Globe size={15} />
                     <span>Website</span>
                   </a>
                 )}
                 {seller.social_media_handle && (
-                  <a href={`https://tiktok.com/@${seller.social_media_handle}`} target="_blank" rel="noreferrer" className="contact-item">
+                  <a href={`https://tiktok.com/@${seller.social_media_handle}`} target="_blank" rel="noreferrer" className="sd-pill">
                     <TikTokIcon />
                     <span>{seller.social_media_handle}</span>
                   </a>
@@ -245,20 +302,21 @@ const SellerStorePreviewPage = () => {
           </div>
 
           {/* Products */}
-          <div className="container" style={{ paddingBottom: '3rem' }}>
+          <div className="container sd-products-section">
             <div className="seller-products-header">
               <div>
-                <h2>Products <span className="products-count">{loading ? '—' : products.length}</span></h2>
+                <h2 style={{color: 'var(--ink-light)'}}>Products <span className="products-count">{loading ? '—' : products.length}</span></h2>
               </div>
             </div>
 
             {categories.length > 1 && (
-              <div className="category-pills" style={{ marginBottom: '1.5rem' }}>
+              <div className="sd-chip-row" style={{color: 'var(--ink-light)'}}>
                 {categories.map(cat => (
                   <button
                     key={cat}
-                    className={`category-pill ${category === cat ? 'active' : ''}`}
+                    className={`sd-chip ${category === cat ? 'is-active' : ''}`}
                     onClick={() => setCategory(cat)}
+                    style={{color: 'var(--ink-muted)'}}
                   >
                     {cat !== 'All' && <span>{CATEGORY_ICONS[cat]}</span>}
                     {cat}
@@ -279,8 +337,17 @@ const SellerStorePreviewPage = () => {
                 <Link to="/seller/products" className="btn btn-gold btn-sm">Add a product</Link>
               </div>
             ) : (
-              <div className="grid-2 fade-up">
-                {filtered.map(p => <ProductCard key={p._id} product={p} />)}
+              <div className={theme.layout === 'list' ? 'sd-store-list fade-up' : 'grid-2 fade-up'}>
+                {filtered.map(p => (
+                  <div key={p._id} className="sd-product-slot">
+                    {seller.pinnedProducts?.some(pid => (pid._id || pid).toString() === p._id) && (
+                      <span className="badge badge-gold sd-pinned-badge">
+                        <Pin size={11} /> Pinned
+                      </span>
+                    )}
+                    <ProductCard product={p} />
+                  </div>
+                ))}
               </div>
             )}
           </div>

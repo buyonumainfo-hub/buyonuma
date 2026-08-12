@@ -125,7 +125,7 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  z-index: 1000;
+  z-index: 1000000000;
   overflow-y: auto;
 }
 

@@ -18,7 +18,7 @@ function ProductModal({ product, sellers, onClose, onSaved }) {
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
   const handleSubmit = async e => {
     e.preventDefault(); setLoading(true); setError('');
-    try { if(isEdit){await api.put(`/products/${product._id}`,form);toast.success('Updated!');}else{await api.post('/products',form);toast.success('Added!');} onSaved(); onClose(); }
+    try { if(isEdit){await api.put(`/products/admin/${product._id}`,form);toast.success('Updated!');}else{await api.post('/products/admin',form);toast.success('Added!');} onSaved(); onClose(); }
     catch(err){setError(err.response?.data?.message||'Error');} finally{setLoading(false);}
   };
   return (
@@ -60,7 +60,7 @@ export default function AdminProducts() {
   const [modal, setModal] = useState(null); const [deleteId, setDeleteId] = useState(null);
   const fetch = useCallback(async()=>{ setLoading(true); try{ const opt=SORT_OPTIONS[sortIdx]; const res=await api.get('/products/admin/all',{params:{page,limit:10,sort:opt.value,order:opt.order,category:category!=='All'?category:undefined,search:search||undefined}}); setProducts(res.data.products); setPagination(res.data.pagination); }catch(e){console.error(e);}finally{setLoading(false);}}, [page,search,category,sortIdx]);
   useEffect(()=>{ fetch(); api.get('/sellers?limit=200').then(r=>setSellers(r.data.sellers)).catch(console.error); },[fetch]);
-  const handleDelete = async id=>{ try{await api.delete(`/products/${id}`);toast.success('Deleted');fetch();}catch(err){toast.error(err.response?.data?.message||'Failed');}finally{setDeleteId(null);} };
+  const handleDelete = async id=>{ try{await api.delete(`/products/admin/${id}`);toast.success('Deleted');fetch();}catch(err){toast.error(err.response?.data?.message||'Failed');}finally{setDeleteId(null);} };
   return (
     <AdminLayout title="Products">
       <div className="admin-page-actions">

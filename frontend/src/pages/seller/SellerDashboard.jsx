@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, Key, Clock, ArrowRight, AlertCircle, CheckCircle, BarChart3, Copy, Check, Eye, Store } from 'lucide-react';
+import { Package, Key, ArrowRight, AlertCircle, CheckCircle, BarChart3, Copy, Check, Eye, Store, Rocket, MessageCircle, BadgeCheck, User, Settings } from 'lucide-react';
 import SellerLayout from '../../components/seller/SellerLayout';
 import LoadFailedModal from '../../components/seller/LoadFailedModal';
 import { useSellerAuth } from '../../context/SellerAuthContext';
@@ -8,6 +8,26 @@ import api from '../../utils/api';
 import './SellerDashboard.css';
 
 const ADMIN_WA = '2349034611394';
+
+// Quick-action tiles for the app-style grid. `tint` maps to a color
+// chip defined in SellerDashboard.css (keeps the icon palette
+// intentional/categorized rather than random per-tile colors).
+const QUICK_ACTIONS = [
+  { to: '/seller/products',     icon: Package,       label: 'Products',      tint: 'gold' },
+  { to: '/seller/store',        icon: Store,         label: 'My Store',      tint: 'teal' },
+  { to: '/seller/plan',         icon: Rocket,        label: 'Plan',          tint: 'coral' },
+  { to: '/seller/messages',     icon: MessageCircle, label: 'Messages',      tint: 'whatsapp' },
+  { to: '/seller/monitoring',   icon: BarChart3,     label: 'Monitoring',    tint: 'teal' },
+  { to: '/seller/token',        icon: Key,           label: 'Token',         tint: 'gold' },
+  { to: '/seller/verification', icon: BadgeCheck,    label: 'Verified Badge',tint: 'teal' },
+  { to: '/seller/profile',      icon: User,          label: 'Profile',       tint: 'muted' },
+  { to: '/seller/settings',     icon: Settings,       label: 'Settings',     tint: 'muted' },
+];
+
+// Purely decorative growth motif for the analytics teaser — not real
+// data (the real chart lives on /seller/monitoring), just a visual cue
+// that there's something worth looking at there.
+const TEASER_BARS = [38, 52, 44, 68, 58, 82, 71];
 
 const SellerDashboard = () => {
   const { seller } = useSellerAuth();
@@ -52,7 +72,7 @@ const SellerDashboard = () => {
   };
 
   const storeUrl = seller?.username
-    ? `${window.location.origin}/${seller.username}`
+    ? `www.buyonuma.shop/${seller.username}`
     : null;
 
   const handleCopyProfile = async () => {
@@ -66,154 +86,153 @@ const SellerDashboard = () => {
     }
   };
 
+  const hasToken = !!tokenStatus?.has_active_token;
+  const planName = (seller?.plan || 'free').toUpperCase();
+  const isPro = seller?.plan === 'pro';
+  const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening';
+
+  const statCards = [
+    { icon: Package,     tint: 'gold', value: loading ? '—' : stats.total, label: 'Total products' },
+    { icon: CheckCircle, tint: 'teal', value: loading ? '—' : stats.active, label: 'Active & visible' },
+    {
+      icon: Key,
+      tint: hasToken ? 'teal' : 'coral',
+      value: loading ? '—' : hasToken ? formatExpiry(tokenStatus.expires_at) : 'No token',
+      label: 'Token status',
+      small: true,
+    },
+  ];
+
   return (
     <SellerLayout title="Dashboard">
       {loadError && <LoadFailedModal onRetry={handleRetry} retrying={retrying} />}
       <div className="seller-dash fade-up">
 
-        {/* Approval warning */}
-        {seller && !seller.isApproved && (
-          <div className="dash-alert dash-alert-warn">
-            <AlertCircle size={18} />
-            <div>
-              <strong>Awaiting Admin Approval</strong>
-               <p>Message Admin on whatsapp " 09034611394 " to approve your account or click the buuton below. </p>
-              <p>Your account is under review. You can set up your store but cannot post products until approved.</p>
-               <a
-            href={`https://wa.me/${ADMIN_WA}?text=${encodeURIComponent(`Hi! I just registered on BuyOnUma. Please approve my seller account.\nStore: ${seller?.store_name} (@${seller?.username})`)}`}
-            className="btn btn-wa btn-lg"
-            target="_blank" rel="noreferrer">
-            <WaIcon /> Message Admin on WhatsApp
-          </a>
-            </div>
-
+         {/* Header */}
+        <div className="dash-header">
+          <div>
+            <p className="dash-eyebrow">{greeting}</p>
+            <h1 className="dash-title">{seller?.store_name || 'Your store'}</h1>
           </div>
-        )}
-
-        {seller?.isApproved && (
-          <div className="dash-alert dash-alert-ok">
-            <CheckCircle size={18} />
-            <p>Your account is <strong>approved</strong>. You can post products and redeem tokens.</p>
-          </div>
-        )}
-
-        {/* Store profile / share card */}
-        {seller && (
-          <div className="dash-profile-card">
-            <div className="dash-profile-icon"><Store size={22} /></div>
-            <div className="dash-profile-info">
-              <strong>{seller.store_name}</strong>
-              <p className="dash-profile-url">{storeUrl || 'Set a username to get your store link'}</p>
+          <span className={`dash-status-pill ${seller?.isApproved ? 'is-ok' : 'is-pending'}`}>
+            {seller?.isApproved ? <CheckCircle size={13} /> : <AlertCircle size={13} />}
+            {seller?.isApproved ? 'Approved' : 'Pending review'}
+          </span>
+        </div>
+        
+           {/* Hero: store pass + plan */}
+        <div className="dash-hero">
+           <Link to="/seller/plan" className="dash-plan">
+            <span className={`dash-plan-badge ${isPro ? 'is-pro' : ''}`}>{planName} PLAN</span>
+            <p className="dash-plan-limits">{seller?.productLimit || 20} products &middot; {seller?.pinLimit || 5} pins</p>
+            <span className="dash-plan-cta">
+              {isPro ? 'Manage plan' : 'Upgrade plan'} <ArrowRight size={14} />
+            </span>
+          </Link>
+          
+          <div className="dash-ticket">
+            <div className="dash-ticket-top">
+              <span className="dash-ticket-icon"><Store size={20} /></span>
+              <span className="dash-ticket-eyebrow">Store pass</span>
             </div>
-            <div className="dash-profile-actions">
+            <p className="dash-ticket-name">{seller?.store_name || 'Unnamed store'}</p>
+            <div className="dash-ticket-divider" />
+            <p className="dash-ticket-url">{storeUrl || 'Set a username to get your store link'}</p>
+            <div className="dash-ticket-actions">
               <button
                 type="button"
                 className="btn btn-outline btn-sm"
                 onClick={handleCopyProfile}
                 disabled={!storeUrl}
-                title="Copy store link"
               >
                 {copied ? <Check size={14} /> : <Copy size={14} />}
-                {copied ? 'Copied' : 'Copy Link'}
+                {copied ? 'Copied' : 'Copy link'}
               </button>
               <a
                 href={storeUrl || '#'}
                 target="_blank"
                 rel="noreferrer"
                 className={`btn btn-gold btn-sm${!storeUrl ? ' btn-disabled' : ''}`}
-                title="View your store"
                 onClick={(e) => { if (!storeUrl) e.preventDefault(); }}
               >
-                <Eye size={14} /> View Store
+                <Eye size={14} /> View store
               </a>
             </div>
           </div>
+        </div>
+
+           {/* Approval CTA — the one thing that blocks selling, so it stays
+            prominent until resolved. Once approved this whole block is
+            gone; status lives quietly in the pill above instead. */}
+        {seller && !seller.isApproved && (
+          <div className="dash-alert">
+            <AlertCircle size={18} />
+            <div>
+              <strong>Awaiting admin approval</strong>
+              <p>You can set up your store, but products won't be visible until an admin approves your account.</p>
+            </div>
+            <a
+              href={`https://wa.me/${ADMIN_WA}?text=${encodeURIComponent(`Hi! I just registered on BuyOnUma. Please approve my seller account.\nStore: ${seller?.store_name} (@${seller?.username})`)}`}
+              className="btn btn-wa"
+              target="_blank" rel="noreferrer">
+              <WaIcon /> Message admin
+            </a>
+          </div>
         )}
 
-      
-        {/* Analytics teaser — full charts live on the Monitoring page */}
-        <Link to="/seller/monitoring" className="dash-monitoring-teaser">
-          <BarChart3 size={22} />
-          <div>
-            <h3>Store Analytics</h3>
-            <p>See your views, WhatsApp clicks, and top products with charts</p>
-          </div>
-          <ArrowRight size={16} className="quick-link-arrow" />
-        </Link>
-
-        {/* Quick links */}
-        <div className="dash-quick-links">
-          <Link to="/seller/products" className="quick-link-card">
-            <Package size={24} />
-            <div>
-              <h3>My Products</h3>
-              <p>Add, edit and manage your listings</p>
-            </div>
-            <ArrowRight size={16} className="quick-link-arrow" />
-          </Link>
-          <Link to="/seller/token" className="quick-link-card">
-            <Key size={24} />
-            <div>
-              <h3>Redeem Token</h3>
-              <p>Enter your admin token to activate listings</p>
-            </div>
-            <ArrowRight size={16} className="quick-link-arrow" />
-          </Link>
-          <Link to="/seller/profile" className="quick-link-card">
-            <Clock size={24} />
-            <div>
-              <h3>Edit Profile</h3>
-              <p>Update store info, WhatsApp, images</p>
-            </div>
-            <ArrowRight size={16} className="quick-link-arrow" />
-          </Link>
-        </div>
-      </div>
-
-  <br />
-        {/* Stats */}
-        <div className="seller-stats-grid">
-          <div className="seller-stat-card">
-            <div className="seller-stat-icon"><Package size={22} /></div>
-            <div>
-              <p className="seller-stat-num">{loading ? '—' : stats.total}</p>
-              <p className="seller-stat-label">Total Products</p>
-            </div>
-          </div>
-          <div className="seller-stat-card">
-            <div className="seller-stat-icon active"><Package size={22} /></div>
-            <div>
-              <p className="seller-stat-num">{loading ? '—' : stats.active}</p>
-              <p className="seller-stat-label">Active / Visible</p>
-            </div>
-          </div>
-          <div className="seller-stat-card">
-            <div className="seller-stat-icon token"><Key size={22} /></div>
-            <div>
-              <p className="seller-stat-num" style={{ fontSize: '1rem' }}>
-                {loading ? '—' : tokenStatus?.has_active_token
-                  ? formatExpiry(tokenStatus.expires_at)
-                  : 'No Token'}
-              </p>
-              <p className="seller-stat-label">Token Status</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Token banner */}
-        {!loading && !tokenStatus?.has_active_token && seller?.isApproved && (
-          <div className="dash-token-banner" >
-            <Key size={20} />
-            <div>
-              <strong style={{"color": "black"}} >No active token</strong>
-              <p style={{"color": "black"}}>Your products won't show on the marketplace until you redeem a token from the admin. Get a token and redeem it to set your listing duration.</p>
-            </div>
-            <Link to="/seller/token" className="btn btn-gold btn-sm">
-              Redeem Token <ArrowRight size={14} />
+        {/* Quick actions */}
+        <p className="dash-section-label">Quick actions</p>
+        <div className="dash-grid">
+          {QUICK_ACTIONS.map(({ to, icon: Icon, label, tint }) => (
+            <Link key={to} to={to} className="dash-tile">
+              <span className={`dash-chip tint-${tint}`}><Icon size={20} /></span>
+              <span className="dash-tile-label">{label}</span>
             </Link>
+          ))}
+        </div>
+
+        {/* Analytics teaser */}
+        <Link to="/seller/monitoring" className="dash-teaser">
+          <div className="dash-teaser-bars" aria-hidden="true">
+            {TEASER_BARS.map((h, i) => <span key={i} style={{ '--h': `${h}%` }} />)}
           </div>
+          <div className="dash-teaser-copy">
+            <h3>Store analytics</h3>
+            <p>Views, WhatsApp clicks and your top products, charted</p>
+          </div>
+          <ArrowRight size={16} />
+        </Link>
+       
+
+     
+        {/* Stat strip */}
+        <div className="dash-stats">
+          {statCards.map(({ icon: Icon, tint, value, label, small }) => (
+            <div className="dash-stat" key={label}>
+              <span className={`dash-chip tint-${tint}`}><Icon size={18} /></span>
+              <div>
+                <p className={`dash-stat-value ${small ? 'is-small' : ''} ${loading ? 'is-loading' : ''}`}>{value}</p>
+                <p className="dash-stat-label">{label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Token CTA — only when it's actually actionable */}
+        {!loading && !hasToken && seller?.isApproved && (
+          <Link to="/seller/token" className="dash-token-banner">
+            <span className="dash-chip tint-coral"><Key size={18} /></span>
+            <div>
+              <strong>No active token</strong>
+              <p>Redeem a token from the admin to make your products visible on the marketplace.</p>
+            </div>
+            <ArrowRight size={16} />
+          </Link>
         )}
 
+   
+
+      </div>
     </SellerLayout>
   );
 };

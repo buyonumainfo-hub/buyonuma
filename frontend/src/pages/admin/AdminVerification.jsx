@@ -15,10 +15,11 @@ const AdminVerification = () => {
   const fetchPending = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/verification/nin/pending');
+      const res = await api.get('/verification/nin/pending', { authRole: 'admin' });
       setPending(res.data.sellers || []);
     } catch (err) {
       console.error(err);
+      toast.error(err.response?.data?.message || 'Failed to load pending verifications');
     } finally {
       setLoading(false);
     }
@@ -29,7 +30,7 @@ const AdminVerification = () => {
   const handleApprove = async (id) => {
     setActingId(id);
     try {
-      await api.patch(`/verification/nin/${id}/review`, { status: 'verified' });
+      await api.patch(`/verification/nin/${id}/review`, { status: 'verified' }, { authRole: 'admin' });
       toast.success('Seller verified');
       setPending((prev) => prev.filter((s) => s._id !== id));
     } catch (err) {
@@ -46,7 +47,7 @@ const AdminVerification = () => {
     }
     setActingId(id);
     try {
-      await api.patch(`/verification/nin/${id}/review`, { status: 'rejected', rejectionReason: rejectReason.trim() });
+      await api.patch(`/verification/nin/${id}/review`, { status: 'rejected', rejectionReason: rejectReason.trim() }, { authRole: 'admin' });
       toast.success('Verification rejected');
       setPending((prev) => prev.filter((s) => s._id !== id));
       setRejectingId(null);
@@ -69,8 +70,9 @@ const AdminVerification = () => {
   return (
     <AdminLayout title="Verification Queue">
       <p className="admin-verification-desc">
-        Sellers awaiting final review for the verified badge. Their NIN has already passed the
-        automated check (where configured) — this is your manual sign-off before the badge goes public.
+        Sellers awaiting manual review for the verified badge. No automated identity-checking
+        service is used anywhere in this flow — compare the photo below against the submitted
+        name and NIN yourself before approving.
       </p>
 
       {pending.length === 0 ? (
@@ -82,9 +84,18 @@ const AdminVerification = () => {
         <div className="admin-verification-list">
           {pending.map((s) => (
             <div key={s._id} className="admin-verification-row card">
+              {s.ninPhoto && (
+                <img
+                  src={s.ninPhoto}
+                  alt={`${s.store_name} verification submission`}
+                  className="admin-verification-photo"
+                />
+              )}
               <div className="admin-verification-info">
                 <p className="admin-verification-name">{s.store_name}</p>
                 <p className="admin-verification-meta">@{s.username} · {s.email}</p>
+                <p className="admin-verification-meta"><strong>Full name on ID:</strong> {s.ninFullName || '—'}</p>
+                <p className="admin-verification-meta"><strong>NIN:</strong> {s.nin || '—'}</p>
                 <p className="admin-verification-meta"><Clock size={12} /> Submitted {new Date(s.createdAt).toLocaleDateString()}</p>
               </div>
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BadgeCheck, ShieldAlert, Clock, ShieldOff, Loader2, Fingerprint } from 'lucide-react';
+import { BadgeCheck, ShieldAlert, Clock, ShieldOff, Loader2 } from 'lucide-react';
 import SellerLayout from '../../components/seller/SellerLayout';
 import LoadFailedModal from '../../components/seller/LoadFailedModal';
 import SelfieCapture from '../../components/shared/SelfieCapture';
@@ -7,18 +7,25 @@ import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import './SellerVerification.css';
 
+// Manual, human-review-only verification — no third-party identity API
+// anywhere in this flow (see backend/routes/verification.js). A seller
+// submits their full legal name, NIN, and a photo; an admin looks at it
+// and approves or rejects. A rejected seller can simply submit again —
+// `canSubmit` below allows re-submission for any status except
+// 'verified' or 'pending' (i.e. 'none' and 'rejected' both allow it).
 const STATUS_META = {
-  none:     { icon: ShieldOff,  label: 'Not verified', color: '#8a8a8a', desc: 'Submit your NIN and a selfie below to apply for the verified badge.' },
-  pending:  { icon: Clock,      label: 'Pending review', color: '#b8923a', desc: "We're checking your NIN and selfie. This usually takes a short while — you'll get a notification once it's reviewed." },
+  none:     { icon: ShieldOff,  label: 'Not verified', color: '#8a8a8a', desc: 'Submit your full name, NIN and a photo below to apply for the verified badge.' },
+  pending:  { icon: Clock,      label: 'Pending review', color: '#b8923a', desc: "An admin is manually reviewing your details. You'll get a notification once it's reviewed — this usually takes 1-2 business days." },
   verified: { icon: BadgeCheck, label: 'Verified', color: '#1ebe5d', desc: 'Your store shows the verified badge to all buyers.' },
-  rejected: { icon: ShieldAlert,label: 'Not approved', color: '#e0453c', desc: 'Your last submission was not approved. You can review the reason below and try again.' },
+  rejected: { icon: ShieldAlert,label: 'Not approved', color: '#e0453c', desc: 'Your last submission was not approved. Review the reason below and feel free to submit again.' },
 };
 
 const SellerVerification = () => {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [nin, setNin] = useState('');
-  const [selfieUrl, setSelfieUrl] = useState(null);
+  const [fullName, setFullName] = useState('');
+  const [photo, setPhoto] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [retrying, setRetrying] = useState(false);
@@ -44,25 +51,27 @@ const SellerVerification = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const trimmed = nin.trim();
-    if (!/^\d{11}$/.test(trimmed)) {
+    const trimmedNin = nin.trim();
+    if (!/^\d{11}$/.test(trimmedNin)) {
       toast.error('NIN must be exactly 11 digits');
       return;
     }
-    if (!selfieUrl) {
-      toast.error('Please take or upload a selfie for face verification');
+    if (fullName.trim().length < 3) {
+      toast.error('Enter your full legal name as it appears on your ID');
+      return;
+    }
+    if (!photo) {
+      toast.error('Please take or upload a photo for identity review');
       return;
     }
     setSubmitting(true);
     try {
-      const res = await api.post('/verification/nin', { nin: trimmed, selfieUrl });
-      toast.success(res.data.message || 'NIN and selfie submitted for review');
-      setNin('');
-      setSelfieUrl(null);
+      const res = await api.post('/verification/nin', { nin: trimmedNin, fullName: fullName.trim(), photo });
+      toast.success(res.data.message || 'Submitted for review');
+      setNin(''); setFullName(''); setPhoto(null);
       fetchStatus();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not submit for verification');
-      fetchStatus(); // an auto-rejection (bad face match / failed liveness) still counts as a status change
     } finally {
       setSubmitting(false);
     }
@@ -87,7 +96,6 @@ const SellerVerification = () => {
   const meta = STATUS_META[status?.ninStatus || 'none'];
   const Icon = meta.icon;
   const canSubmit = status?.ninStatus !== 'verified' && status?.ninStatus !== 'pending';
-  const hasFaceMatchData = typeof status?.ninFaceMatchScore === 'number' || typeof status?.ninLivenessPassed === 'boolean';
 
   return (
     <SellerLayout title="Verified Badge">
@@ -100,17 +108,6 @@ const SellerVerification = () => {
           </div>
         </div>
 
-        {hasFaceMatchData && (
-          <div className="seller-verification-facematch">
-            <Fingerprint size={15} />
-            <span>
-              {typeof status.ninFaceMatchScore === 'number' && `Face match: ${status.ninFaceMatchScore}%`}
-              {typeof status.ninFaceMatchScore === 'number' && typeof status.ninLivenessPassed === 'boolean' && ' · '}
-              {typeof status.ninLivenessPassed === 'boolean' && (status.ninLivenessPassed ? 'Liveness check passed' : 'Liveness check failed')}
-            </span>
-          </div>
-        )}
-
         {status?.ninStatus === 'rejected' && status?.ninRejectionReason && (
           <div className="seller-verification-reason">
             <strong>Reason:</strong> {status.ninRejectionReason}
@@ -119,6 +116,17 @@ const SellerVerification = () => {
 
         {canSubmit && (
           <form onSubmit={handleSubmit} className="seller-verification-form">
+            <div className="form-group">
+              <label className="form-label">Full Legal Name (as on your ID)</label>
+              <input
+                className="form-control"
+                placeholder="e.g. Adaeze Chinonso Okafor"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                maxLength={150}
+              />
+            </div>
+
             <div className="form-group">
               <label className="form-label">National Identification Number (NIN)</label>
               <input
@@ -130,23 +138,22 @@ const SellerVerification = () => {
                 onChange={(e) => setNin(e.target.value.replace(/\D/g, ''))}
               />
               <p className="seller-verification-hint">
-                Your NIN is stored securely and never shown publicly. It's used only to confirm your
-                identity for the verified badge. See our <a href="/privacy">Privacy Policy</a> for details.
+                Your NIN is stored securely and never shown publicly — it's only visible to an
+                admin manually reviewing your submission. See our <a href="/privacy">Privacy Policy</a> for details.
               </p>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Selfie for Face Verification</label>
-              <SelfieCapture onCapture={setSelfieUrl} disabled={submitting} />
+              <label className="form-label">Photo (holding your ID, or the ID itself)</label>
+              <SelfieCapture onCapture={setPhoto} disabled={submitting} />
               <p className="seller-verification-hint">
-                Take a clear, well-lit selfie facing the camera directly. This is matched against the
-                photo on record for your NIN to confirm you're a real person and the rightful owner
-                of the ID.
+                Take a clear photo or upload one — an admin manually compares this against the
+                name and NIN you entered. No automated face-matching service is used.
               </p>
             </div>
 
-            <button type="submit" className="btn btn-primary" disabled={submitting || nin.length !== 11 || !selfieUrl}>
-              {submitting ? <><Loader2 size={15} className="spin" /> Submitting…</> : 'Submit for Verification'}
+            <button type="submit" className="btn btn-primary" disabled={submitting || nin.length !== 11 || fullName.trim().length < 3 || !photo}>
+              {submitting ? <><Loader2 size={15} className="spin" /> Submitting…</> : 'Submit for Review'}
             </button>
           </form>
         )}

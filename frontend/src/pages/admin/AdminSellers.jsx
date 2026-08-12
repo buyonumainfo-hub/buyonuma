@@ -4,6 +4,7 @@ import AdminLayout from '../../components/admin/AdminLayout';
 import Pagination from '../../components/shared/Pagination';
 import api from '../../utils/api';
 import { uploadToCloudinary } from '../../utils/cloudinary';
+import LocationSelect from '../../components/shared/LocationSelect';
 import toast from 'react-hot-toast';
 import { CATEGORIES_NO_ALL, SELLER_SORT_OPTIONS, CATEGORY_ICONS, ADMIN_SELLER_SORT_OPTIONS } from '../../utils/constants';
 import './AdminSellers.css';
@@ -11,7 +12,8 @@ import './AdminSellers.css';
 const EMPTY_FORM = {
   username:'', email:'', store_name:'', description:'', category:'Electronics',
   rating:0, contact:'', website:'', social_media_handle:'', whatsapp:'',
-  profile_picture:'', banner:'', isApproved:true
+  profile_picture:'', banner:'', isApproved:true, state:'', city:'', plan:'free',
+  ninStatus:'unverified'
 };
 
 const ImageUploadField = ({ label, value, onChange, circle }) => {
@@ -47,7 +49,11 @@ const ImageUploadField = ({ label, value, onChange, circle }) => {
   );
 };
 
-const SellerModal = ({ seller, onClose, onSaved }) => {
+// FIX: added `availablePlans` to the destructured props. Previously this
+// component referenced `availablePlans` from outer scope, where it did not
+// exist — that threw a ReferenceError as soon as the Plan <select> tried to
+// render, which crashed the whole modal (and looked like a "blank page").
+const SellerModal = ({ seller, onClose, onSaved, availablePlans }) => {
   const isEdit = !!seller?._id;
   const [form, setForm]     = useState(isEdit ? { ...seller, password:'' } : { ...EMPTY_FORM, password:'' });
   const [loading, setLoading] = useState(false);
@@ -128,6 +134,33 @@ const SellerModal = ({ seller, onClose, onSaved }) => {
               <label className="form-label">Description</label>
               <textarea className="form-control" rows={3} value={form.description} onChange={e => set('description', e.target.value)} />
             </div>
+            <div className="form-group">
+              <label className="form-label">Location</label>
+              <LocationSelect state={form.state} city={form.city} onChange={(field, v) => set(field, v)} />
+            </div>
+            <div className="grid-2">
+              <div className="form-group">
+                <label className="form-label">Plan</label>
+                <select className="form-control" value={form.plan || 'free'} onChange={e => set('plan', e.target.value)}>
+                  {availablePlans && availablePlans.length > 0 ? (
+                    availablePlans.map(p => (
+                      <option key={p.key} value={p.key}>
+                        {p.label} ({p.productLimit} products, {p.pinLimit} pins)
+                      </option>
+                    ))
+                  ) : (
+                    <option value="free">Free (50 products, 5 pins)</option>
+                  )}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Verification Status</label>
+                <input className="form-control" value={form.ninStatus || 'unverified'} disabled style={{ textTransform: 'capitalize' }} />
+                <span style={{ fontSize: '0.72rem', color: 'var(--ink-muted)' }}>
+                  Managed from the <a href="/admin/verification">Verification page</a>, not here.
+                </span>
+              </div>
+            </div>
             <div className="grid-2">
               <div className="form-group">
                 <label className="form-label">Contact</label>
@@ -165,6 +198,11 @@ const SellerModal = ({ seller, onClose, onSaved }) => {
 
 const AdminSellers = () => {
   const [sellers, setSellers]     = useState([]);
+  // Populates the "Plan" dropdown below with whatever plans currently
+  // exist (admin-managed at /admin/plans) instead of a hardcoded
+  // free/plus/pro list that would go stale the moment a plan is renamed
+  // or a new one is added.
+  const [availablePlans, setAvailablePlans] = useState([]);
   const [pagination, setPagination] = useState(null);
   const [loading, setLoading]     = useState(true);
   const [search, setSearch]       = useState('');
@@ -187,6 +225,9 @@ const AdminSellers = () => {
   }, [page, search, category, sortIdx]);
 
   useEffect(() => { fetchSellers(); }, [fetchSellers]);
+  useEffect(() => {
+    api.get('/payments/plans').then(res => setAvailablePlans(res.data.plans || [])).catch(() => {});
+  }, []);
 
   const handleDelete = async (id) => {
     try { await api.delete(`/sellers/admin/${id}`); toast.success('Seller deleted'); fetchSellers(); }
@@ -274,7 +315,14 @@ const AdminSellers = () => {
         </>
       )}
 
-      {modal && <SellerModal seller={modal === 'add' ? null : modal} onClose={() => setModal(null)} onSaved={fetchSellers} />}
+      {modal && (
+        <SellerModal
+          seller={modal === 'add' ? null : modal}
+          onClose={() => setModal(null)}
+          onSaved={fetchSellers}
+          availablePlans={availablePlans}
+        />
+      )}
 
       {deleteId && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setDeleteId(null)}>
