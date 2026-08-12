@@ -1,38 +1,51 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, Key, User, Moon,Sun, LogOut, Menu, X, ShoppingBag, Bell, BadgeCheck, BarChart3 , Store} from 'lucide-react';
+import { useNavigate,Link } from 'react-router-dom';
+
+import {
+  LayoutDashboard, Package, Key, User, Moon, Sun, LogOut, ShoppingBag, Bell,
+  BadgeCheck, BarChart3, Store, MessageCircle, Settings, Rocket, Users, ShoppingCart,
+} from 'lucide-react';
 import { useSellerAuth } from '../../context/SellerAuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import AppTabBar from '../shared/AppTabBar';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import './SellerLayout.css';
 
-const navItems = [
-  { to: '/seller/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/seller/products',  icon: Package,         label: 'My Products' },
-    { to: '/seller/store',   icon: Store,            label: 'Store' },
-  { to: '/seller/monitoring',    icon: BarChart3,   label: 'Monitoring' },
-  { to: '/seller/token',     icon: Key,             label: 'Redeem Token' },
-  { to: '/seller/notifications', icon: Bell,        label: 'Notifications', badgeKey: 'unread' },
-  { to: '/seller/verification',  icon: BadgeCheck,  label: 'Verified Badge' },
-  { to: '/seller/profile',   icon: User,            label: 'Profile' },
+// Primary tabs — kept to 4 so they fit comfortably in a thumb-reachable
+// bottom bar, plus the marketplace's own public "Products" and "Sellers"
+// pages so a seller can jump straight into browsing the marketplace
+// without leaving the app shell (mirrors the buyer tab bar — see
+// BuyerDashboard.jsx).
+const primaryTabs = (unread) => [
+  { to: '/seller/dashboard', icon: LayoutDashboard, label: 'Home' },
+  { to: '/seller/products',  icon: Package,         label: 'Products' },
+  { to: '/', icon: ShoppingCart, label: 'Marketplace' },
+  { to: '/sellers', icon: Users, label: 'Sellers' },
+  { to: '/seller/messages',  icon: MessageCircle,   label: 'Messages', badge: unread },
+];
+
+const moreTabs = [
+  { to: '/seller/store',        icon: Store,       label: 'My Store' },
+  { to: '/seller/plan',         icon: Rocket,       label: 'Plan' },
+  { to: '/seller/monitoring',   icon: BarChart3,    label: 'Monitoring' },
+  { to: '/seller/token',        icon: Key,          label: 'Redeem Token' },
+  { to: '/seller/notifications',icon: Bell,         label: 'Notifications' },
+  { to: '/seller/verification', icon: BadgeCheck,   label: 'Verified Badge' },
+  { to: '/seller/profile',      icon: User,         label: 'Profile' },
+  { to: '/seller/settings',     icon: Settings,      label: 'Settings' },
 ];
 
 const SellerLayout = ({ children, title }) => {
   const { seller, logout } = useSellerAuth();
-  const location = useLocation();
   const navigate  = useNavigate();
-  const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
-
-    const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
-    // Poll unread notification count periodically so the sidebar badge
-    // stays reasonably fresh without needing a websocket connection.
     const fetchUnread = () => {
       api.get('/notifications/seller', { params: { limit: 1 } })
-        .then(res => setUnread(res.data.unreadCount || 0))
+        .then(res => setUnread(res.data.unreadCount - 1 || 0))
         .catch(() => {});
     };
     fetchUnread();
@@ -47,69 +60,43 @@ const SellerLayout = ({ children, title }) => {
   };
 
   return (
-    <div className="seller-layout">
-      <aside className={`seller-sidebar ${open ? 'open' : ''}`}>
-        <div className="seller-sidebar-header">
-          <div className="seller-sidebar-brand">
-            <ShoppingBag size={18} />
-            <div>
-              <span className="sidebar-brand-title" style={{color: "whitesmoke"}}>UMA</span>
-              <span className="sidebar-brand-sub" >Seller Panel</span>
-            </div>
-          </div>
-          <button className="sidebar-close-btn" onClick={() => setOpen(false)}><X size={18} /></button>
+    <div className="seller-layout seller-layout-tabbed">
+      <header className="seller-topbar">
+        <div className="seller-topbar-brand">
+          <ShoppingBag size={18} />
+          <h1 className="seller-page-title">{title}</h1>
         </div>
-
-        {seller && (
-          <div className="seller-sidebar-profile">
-            {seller.profile_picture
-              ? <img src={seller.profile_picture} alt={seller.store_name} />
-              : <div className="seller-sidebar-avatar">{seller.store_name?.[0]?.toUpperCase()}</div>
-            }
-            <div>
-              <p style={{color: "whitesmoke"}} className="sidebar-store-name">{seller.store_name}</p>
-              <span className={`sidebar-status ${seller.isApproved ? 'approved' : 'pending'}`}>
-                {seller.isApproved ? '✓ Approved' : '⏳ Pending Approval'}
-              </span>
-            </div>
-          </div>
-        )}
-
-        <nav className="seller-nav">
-          {navItems.map(({ to, icon: Icon, label, badgeKey }) => (
-            <Link key={to} to={to}
-              className={`seller-nav-item ${location.pathname === to ? 'active' : ''}`}
-              onClick={() => setOpen(false)}>
-              <Icon size={18} /><span>{label}</span>
-              {badgeKey === 'unread' && unread > 0 && (
+        <div className="seller-topbar-right">
+          {seller && (
+            <span className={`sidebar-status ${seller.isApproved ? 'approved' : 'pending'}`}>
+              {seller.isApproved ? '✓ Approved' : '⏳ Pending'}
+            </span>
+          )}
+          
+          <Link
+            to="/seller/notifications"
+            className="seller-notifications-btn theme-toggle"
+            aria-label="View notifications"
+          >
+             { unread > 0 && (
                 <span className="seller-nav-badge">{unread > 99 ? '99+' : unread}</span>
               )}
-            </Link>
-          ))}
-        </nav>
-
-        <button className="seller-logout" onClick={handleLogout}>
-          <LogOut size={16} /><span>Sign Out</span>
-        </button>
-      </aside>
-
-      {open && <div className="seller-overlay" onClick={() => setOpen(false)} />}
-
-      <div className="seller-main">
-        <header className="seller-topbar">
-          <button className="topbar-menu-btn" onClick={() => setOpen(true)}><Menu size={20} /></button>
-          <h1 className="seller-page-title">{title}</h1>
-          <span className="seller-topbar-badge">Seller</span>
-            <button
+           <Bell size={17}/>
+          </Link>
+          
+          <button
             className="theme-toggle"
             onClick={toggleTheme}
             aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
           >
             {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
           </button>
-        </header>
-        <main className="seller-content">{children}</main>
-      </div>
+        </div>
+      </header>
+
+      <main className="seller-content seller-content-tabbed">{children}</main>
+
+      <AppTabBar items={primaryTabs(unread)} moreItems={moreTabs} onLogout={handleLogout} />
     </div>
   );
 };

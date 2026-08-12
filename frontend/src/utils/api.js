@@ -48,8 +48,10 @@ api.interceptors.request.use((config) => {
   // Round-robin the base URL across configured servers.
   config.baseURL = nextBaseURL();
 
-  const adminToken  = localStorage.getItem('lens_admin_token');
-  const sellerToken = localStorage.getItem('lens_seller_token');
+  const adminToken     = localStorage.getItem('lens_admin_token');
+  const sellerToken    = localStorage.getItem('lens_seller_token');
+  const buyerToken     = localStorage.getItem('lens_buyer_token');
+  const affiliateToken = localStorage.getItem('lens_affiliate_token');
 
   // Explicit > inferred: if the caller tells us which token this request
   // needs (config.authRole), trust that completely. This is what fixes
@@ -62,11 +64,15 @@ api.interceptors.request.use((config) => {
     token = adminToken;
   } else if (config.authRole === 'seller') {
     token = sellerToken;
+  } else if (config.authRole === 'buyer') {
+    token = buyerToken;
+  } else if (config.authRole === 'affiliate') {
+    token = affiliateToken;
   } else {
     // Legacy fallback for any call site not yet passing authRole.
     token = isAdminRoute(config.url)
-      ? (adminToken || sellerToken)
-      : (sellerToken || adminToken);
+      ? (adminToken || sellerToken || buyerToken || affiliateToken)
+      : (sellerToken || buyerToken || affiliateToken || adminToken);
   }
 
   if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -108,6 +114,13 @@ api.interceptors.response.use(
       if (role === 'admin') {
         localStorage.removeItem('lens_admin_token');
         window.location.href = '/admin/login';
+      } else if (role === 'buyer') {
+        localStorage.removeItem('lens_buyer_token');
+        // Buyers can keep browsing anonymously — no forced redirect, just
+        // drop the stale token so the next authed action re-prompts login.
+      } else if (role === 'affiliate') {
+        localStorage.removeItem('lens_affiliate_token');
+        window.location.href = '/affiliate/login';
       } else {
         localStorage.removeItem('lens_seller_token');
         window.location.href = '/seller/login';

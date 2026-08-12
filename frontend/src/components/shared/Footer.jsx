@@ -8,7 +8,7 @@ const Footer = () => (
       <div className="footer-brand">
         <div className="footer-logo">
           <ShoppingBag size={18} />
-          <span style={{"color": "white"}}>UMA</span>
+          <span>UMA</span>
         </div>
          <p>A universal marketplace — connecting buyers and sellers everywhere, on and off campus.</p>
       </div>
@@ -29,6 +29,7 @@ const Footer = () => (
           <h4>Account</h4>
           <Link to="/seller/login">Seller Login</Link>
           <Link to="/seller/register">Seller Register</Link>
+          <Link to="/affiliate/register">Become an Affiliate</Link>
         </div>
         <div>
           <h4>Legal</h4>

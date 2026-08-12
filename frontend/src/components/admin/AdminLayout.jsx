@@ -1,25 +1,39 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users, Package, Settings, LogOut, Menu, X, ShoppingBag, BarChart3, Megaphone, BadgeCheck } from 'lucide-react';
+import { LayoutDashboard, Users, Package, Settings, LogOut, Menu, X, ShoppingBag, BarChart3, Megaphone, BadgeCheck, ShieldCheck, Wallet, Tags, UserPlus } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import './AdminLayout.css';
 
+// Each nav item maps to the permission that guards its page (see
+// backend/models/AdminRole.js ADMIN_PERMISSIONS + requirePermission() on
+// the corresponding routes). `null` = always visible to any admin
+// (Dashboard is just a summary view, nothing to gate).
 const navItems = [
-  { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/admin/sellers', icon: Users, label: 'Sellers' },
-  { to: '/admin/products', icon: Package, label: 'Products' },
-  { to: '/admin/monitoring', icon: BarChart3, label: 'Monitoring' },
-  { to: '/admin/verification', icon: BadgeCheck, label: 'Verification' },
-  { to: '/admin/broadcast', icon: Megaphone, label: 'Broadcast' },
-  { to: '/admin/settings', icon: Settings, label: 'Settings' },
+  { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', permission: null },
+  { to: '/admin/sellers', icon: Users, label: 'Sellers', permission: 'sellers.view' },
+  { to: '/admin/products', icon: Package, label: 'Products', permission: 'products.view' },
+  { to: '/admin/revenue', icon: Wallet, label: 'Revenue', permission: 'payments.view' },
+  { to: '/admin/plans', icon: Tags, label: 'Plans', permission: 'plans.manage' },
+  { to: '/admin/affiliates', icon: UserPlus, label: 'Affiliates', permission: 'affiliates.manage' },
+  { to: '/admin/monitoring', icon: BarChart3, label: 'Monitoring', permission: 'monitoring.view' },
+  { to: '/admin/verification', icon: BadgeCheck, label: 'Verification', permission: 'verification.review' },
+  { to: '/admin/broadcast', icon: Megaphone, label: 'Broadcast', permission: 'broadcast.send' },
+  { to: '/admin/roles', icon: ShieldCheck, label: 'Roles & Team', permission: 'roles.manage' },
+  { to: '/admin/settings', icon: Settings, label: 'Settings', permission: 'settings.edit' },
 ];
 
 const AdminLayout = ({ children, title }) => {
-  const { logout } = useAuth();
+  const { logout, hasPermission } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // A role with no explicit grant for a page simply doesn't see it in
+  // the nav — enforced here for the UI, and server-side by
+  // requirePermission() on the actual routes (so this is convenience,
+  // not the real security boundary).
+  const visibleItems = navItems.filter(item => !item.permission || hasPermission(item.permission));
 
   const handleLogout = () => {
     logout();
@@ -45,7 +59,7 @@ const AdminLayout = ({ children, title }) => {
         </div>
 
         <nav className="admin-nav">
-          {navItems.map(({ to, icon: Icon, label }) => (
+          {visibleItems.map(({ to, icon: Icon, label }) => (
             <Link
               key={to}
               to={to}

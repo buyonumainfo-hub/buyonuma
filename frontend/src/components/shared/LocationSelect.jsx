@@ -29,6 +29,7 @@ const LocationSelect = ({ state, city, onChange, required = true }) => {
       <div className="form-group">
         <label className="form-label">State {required && '*'}</label>
         <select
+        style={{background: 'white'}}
           className="form-control"
           required={required}
           value={state}
@@ -47,6 +48,7 @@ const LocationSelect = ({ state, city, onChange, required = true }) => {
       </div>
       {isWorldwide ? (
         <div className="form-group">
+
           <label className="form-label">City / Town</label>
           <div className="form-control" style={{ display: 'flex', alignItems: 'center', color: 'var(--ink-muted)', background: 'var(--cream)' }}>
             Not needed — your store ships/sells everywhere
@@ -56,10 +58,11 @@ const LocationSelect = ({ state, city, onChange, required = true }) => {
         <div className="form-group">
           <label className="form-label">City / Town {required && '*'}</label>
          <select
+         
         value={city}
         onChange={(e) => onChange('city', e.target.value)}
         className="form-control"
-        style={{ width: 'auto' }}
+        style={{ width: 'auto' , background: 'white'}}
         disabled={!state}
       >
         <option value="">{state ? 'All LGAs / Cities' : 'Select a state first'}</option>

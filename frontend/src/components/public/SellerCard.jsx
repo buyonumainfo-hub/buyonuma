@@ -22,7 +22,7 @@ const SellerCard = ({ seller }) => {
   const icon = CATEGORY_ICONS[seller.category] || '📦';
 
   return (
-    <Link to={`/${seller.username}`} className="seller-card card">
+    <Link to={`/${seller.username}`} className="seller-card">
       <div className="seller-card-banner">
         {seller.banner ? (
           <OptimizedImage src={seller.banner} alt={seller.store_name} width={560} height={240} />
@@ -57,7 +57,7 @@ const SellerCard = ({ seller }) => {
         </h3>
         <p className="seller-card-username">@{seller.username}</p>
         {(seller.city || seller.state) && (
-          <p className="seller-card-username" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          <p className="seller-card-username seller-card-location">
             <MapPin size={12} />
             {seller.city ? `${seller.city}, ${seller.state}` : seller.state}
           </p>

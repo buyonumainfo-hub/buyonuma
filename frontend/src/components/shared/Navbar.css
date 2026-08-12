@@ -2,7 +2,7 @@
   background: var(--white);
   border-bottom: 1px solid var(--border);
   position: sticky;
-  top: 0;
+  top: 0px;
   z-index: 100;
   transition: background-color 0.25s ease, border-color 0.25s ease;
 }
@@ -11,6 +11,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
   height: 60px;
 }
 
@@ -24,19 +25,14 @@
   flex-shrink: 0;
 }
 .navbar-brand svg { color: var(--gold); }
-.brand-text { font-family: var(--font-serif); font-size: 1.1rem; font-weight: 700; }
+.brand-text { font-family: var(--font-serif); font-size: 1.1rem; font-weight: 700; white-space: nowrap; }
 .brand-buy  { color: var(--ink); }
 .brand-uma  { color: var(--gold); margin-left: 2px; }
-.brand-sub  {
-  font-family: var(--font-sans);
-  font-size: 0.65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--ink-muted);
-  border-left: 1px solid var(--border);
-  padding-left: 0.6rem;
-  margin-left: 0.2rem;
+
+.logo {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
 }
 
 /* Desktop nav links */
@@ -52,6 +48,7 @@
   text-decoration: none;
   transition: color var(--transition);
   position: relative;
+  white-space: nowrap;
 }
 .nav-link::after {
   content: '';
@@ -69,26 +66,52 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 
-/* Theme toggle */
-.theme-toggle {
+/* Desktop pill buttons (Sell / Seller / Buyer) */
+.account-links { display: flex; align-items: center; gap: 0.5rem; }
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 36px;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: var(--cream);
+  color: var(--ink-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: all var(--transition);
+  flex-shrink: 0;
+}
+.action-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+/* Icon-only buttons (theme toggle, cart, account trigger) — real 44px
+   touch target on mobile per accessibility guidelines, 36px on desktop */
+.icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px; height: 36px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: 1.5px solid var(--border);
   background: var(--cream);
   color: var(--ink-muted);
   cursor: pointer;
+  text-decoration: none;
   transition: all var(--transition);
   flex-shrink: 0;
 }
-.theme-toggle:hover { border-color: var(--gold); color: var(--gold); transform: rotate(15deg); }
+.icon-btn:hover { border-color: var(--gold); color: var(--gold); }
+.theme-toggle:hover { transform: rotate(15deg); }
 
 /* Cart icon + badge */
-.cart-nav-btn { position: relative; text-decoration: none; }
+.cart-nav-btn { position: relative; }
 .cart-nav-btn:hover { transform: none; }
 .cart-nav-badge {
   position: absolute;
@@ -106,17 +129,66 @@
   line-height: 1;
 }
 
-/* Mobile overrides */
+/* Account dropdown (mobile) */
+.account-menu { position: relative; }
+.account-trigger { gap: 2px; width: auto; padding: 0 0.6rem; border-radius: 999px; }
+.chevron { transition: transform var(--transition); }
+.chevron.open { transform: rotate(180deg); }
+
+.account-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 210px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.14);
+  padding: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 110;
+}
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 9px;
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background var(--transition);
+  white-space: nowrap;
+}
+.dropdown-item:hover { background: var(--cream); }
+.dropdown-item svg { color: var(--gold); flex-shrink: 0; }
+
+/* Visibility toggles: swap desktop pill row for the mobile dropdown */
+.mobile-only { display: none; }
+
 @media (max-width: 768px) {
   .desktop-only { display: none !important; }
-  .mobile-sell-btn { display: inline-flex; }
+  .mobile-only { display: flex; }
+
+  .navbar-inner { gap: 0.5rem; }
+  .navbar-actions { gap: 0.4rem; }
+
+  .icon-btn { width: 44px; height: 44px; }
+  .account-trigger { width: auto; padding: 0 0.65rem; }
 }
 
-@media (min-width: 769px) {
-  .mobile-sell-btn { display: none; }
+/* Brand wordmark hides below 638px so the action row has room */
+@media (max-width: 637px) {
+  .brand-text { display: none; }
 }
 
-.logo{
-  width: 40px;
-  height: 40px;
+@media (max-width: 360px) {
+  .navbar-inner { gap: 0.35rem; }
+  .navbar-actions { gap: 0.3rem; }
+  .icon-btn { width: 40px; height: 40px; }
+  .logo { width: 34px; height: 34px; }
+  .account-dropdown { min-width: 190px; right: -8px; }
 }

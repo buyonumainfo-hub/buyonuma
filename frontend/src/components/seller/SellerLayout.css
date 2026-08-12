@@ -16,7 +16,7 @@
 .seller-nav-item{display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.85rem;border-radius:var(--radius);font-size:0.875rem;font-weight:500;color:rgba(255,255,255,0.55);text-decoration:none;transition:all var(--transition)}
 .seller-nav-item:hover{background:rgba(255,255,255,0.06);color:var(--on-surface-dark)}
 .seller-nav-item.active{background:rgba(184,146,58,0.15);color:var(--gold)}
-.seller-nav-badge{margin-left:auto;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#e0453c;color:#fff;font-size:0.65rem;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1}
+.seller-nav-badge{position:absolute; transform: translateX(-11px) translateY(-11px); min-width:15px;height:15px;padding:0 4px;border-radius:999px;background:#e0453c;color:#fff;font-size:0.65rem;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1}
 .seller-logout{margin:0.75rem;display:flex;align-items:center;gap:0.65rem;padding:0.65rem 0.85rem;border-radius:var(--radius);border:1px solid rgba(255,255,255,0.1);background:none;color:rgba(255,255,255,0.45);font-size:0.85rem;cursor:pointer;transition:all var(--transition)}
 .seller-logout:hover{background:rgba(192,57,43,0.15);color:#e74c3c}
 .seller-main{flex:1;margin-left:240px;display:flex;flex-direction:column;min-height:100vh}
@@ -27,3 +27,19 @@
 .seller-content{flex:1;padding:2rem}
 .seller-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:150}
 @media(max-width:768px){.seller-sidebar{transform:translateX(-100%)}.seller-sidebar.open{transform:translateX(0)}.sidebar-close-btn{display:block}.seller-main{margin-left:0}.topbar-menu-btn{display:block}.seller-overlay{display:block}.seller-content{padding:1.25rem}}
+
+/* ── Bottom-tab-bar layout (replaces the sidebar nav) ──────────────────── */
+.seller-layout-tabbed { display: block; min-height: 100vh; background: var(--cream, #faf8f3); }
+.seller-topbar-brand { display: flex; align-items: center; gap: 0.6rem; }
+.seller-topbar-brand svg { color: var(--gold); }
+.seller-topbar-right { display: flex; align-items: center; gap: 0.75rem; margin-left: auto; }
+.seller-content-tabbed {
+  padding: 1.25rem 1.25rem calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  max-width: 1000px;
+  margin: 0 auto;
+}
+@media (max-width: 600px) {
+  .seller-content-tabbed { padding: 1rem 0.85rem calc(5.5rem + env(safe-area-inset-bottom, 0px)); }
+  .seller-topbar { padding: 0 1rem; }
+  .seller-page-title { font-size: 1rem; }
+}

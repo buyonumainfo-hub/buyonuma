@@ -1,21 +1,22 @@
-import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { useLocation, useNavigationType } from 'react-router-dom';
 
+// Scrolls to top on a genuine forward navigation (clicking a link, calling
+// navigate()), but leaves scroll position alone on back/forward browser
+// navigation (POP) — that's what was forcing product/seller/cart pages
+// back to the top every time someone hit the back button. The browser's
+// own scroll restoration handles POP correctly on its own; we just need
+// to get out of its way.
 const ScrollToTop = () => {
   const { pathname } = useLocation();
-  
+  const navType = useNavigationType(); // 'POP' | 'PUSH' | 'REPLACE'
+  const firstRender = useRef(true);
+
   useEffect(() => {
-  // Force scroll after a tiny delay to ensure content is rendered
-  const timer = setTimeout(() => {
+    if (firstRender.current) { firstRender.current = false; return; }
+    if (navType === 'POP') return; // back/forward — preserve scroll position
     window.scrollTo(0, 0);
-  }, 0);
-
-  return () => clearTimeout(timer);
-}, [pathname]);
-
-  // useEffect(() => {
-  //   window.scrollTo(0, 0);
-  // }, [pathname]);
+  }, [pathname, navType]);
 
   return null;
 };

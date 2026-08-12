@@ -1,3 +1,4 @@
+
 export const CATEGORIES = [
   'All',
   'Food & Beverages & Cakes',
@@ -66,4 +67,50 @@ export const CATEGORY_ICONS = {
   'Art & Design': '🎨',
   'Other': '📦',
   'All': '🏪',
+};
+
+
+
+import {
+  PenTool,
+  Ticket,
+  Laptop,
+  Gem,
+  Footprints,
+  SprayCan,
+  Shirt,
+  Sparkles,
+  KeyRound,
+  BookOpen,
+  UtensilsCrossed,
+  HeartPulse,
+  Trophy,
+  Sofa,
+  Wrench,
+  Smartphone,
+  Palette,
+  Package,
+  Store,
+} from 'lucide-react';
+
+export const CATEGORY_ICONS_F = {
+  "Stationery & Supplies": PenTool,
+  "Event Tickets": Ticket,
+  "Electronics": Laptop,
+  "Jewelry & Accessories": Gem,
+  "Shoes": Footprints,
+  "Perfumes": SprayCan,
+  "Clothing": Shirt,
+  "Beauty & Skincare": Sparkles,
+  "Rentals": KeyRound,
+  "Textbooks": BookOpen,
+  "Food & Beverages & Cakes": UtensilsCrossed,
+  "Health & Fitness": HeartPulse,
+  "Sports": Trophy,
+  "Furniture & Home Decor": Sofa,
+  "Services": Wrench,
+  "Phones & Accessories": Smartphone,
+  "Art & Design": Palette,
+  "Other": Package,
+  "All": Store,
 };
