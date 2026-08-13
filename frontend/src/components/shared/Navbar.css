@@ -177,7 +177,7 @@
   .navbar-actions { gap: 0.4rem; }
 
   .icon-btn { width: 44px; height: 44px; }
-  .account-trigger { width: auto; padding: 0 0.65rem; }
+  .account-trigger { width: 80px; padding: 0 0.65rem; }
 }
 
 /* Brand wordmark hides below 638px so the action row has room */

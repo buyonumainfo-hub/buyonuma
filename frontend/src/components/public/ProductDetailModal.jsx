@@ -128,12 +128,7 @@ export default function ProductDetailModal({ productId, onClose }) {
                   {images.length > 0 ? (
                     <>
                       <OptimizedImage src={images[activeIdx]} alt={product.name} className="pdp-main-image" width={800} priority />
-                      {images.length > 1 && (
-                        <>
-                          <button className="pvm-nav pvm-nav-left" onClick={() => setActiveIdx(i => (i === 0 ? images.length - 1 : i - 1))}><ChevronLeft size={20} /></button>
-                          <button className="pvm-nav pvm-nav-right" onClick={() => setActiveIdx(i => (i === images.length - 1 ? 0 : i + 1))}><ChevronRight size={20} /></button>
-                        </>
-                      )}
+                    
                       {images.length > 1 && (
                         <div className="pvm-thumbs">
                           {images.map((img, i) => (

@@ -201,7 +201,7 @@ const { isAuthenticated } = useBuyerAuth();
               ) : (
                 <span className="seller-initial">{product.seller.store_name?.[0]}</span>
               )}
-              <span style={{color: 'var(--ink-muted)'}}>{product.seller.store_name}</span>
+              <span style={{color: 'var(--ink-muted)', width:'50%'}}>{product.seller.store_name}</span>
               {product.seller.ninStatus === 'verified' && (
                 <BadgeCheck size={12} className="verified-badge-icon" title="Verified seller" />
               )}
