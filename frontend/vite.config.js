@@ -12,7 +12,7 @@ export default defineConfig({
         name: 'Buyonuma',
         short_name: 'buyonuma',
         description: 'The official marketplace for buyers and sellers — browse sellers, products and connect on WhatsApp.',
-        theme_color: '#0d0d0d',
+        theme_color: '#faf8f3',
         background_color: '#faf8f3',
         display: 'standalone',
         orientation: 'portrait',
