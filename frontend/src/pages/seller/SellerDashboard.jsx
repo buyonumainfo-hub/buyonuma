@@ -149,7 +149,7 @@ const SellerDashboard = () => {
                 {copied ? 'Copied' : 'Copy link'}
               </button>
               <a
-                href={storeUrl || '#'}
+                href={storeUrl ? `https://${storeUrl}` : '#'}
                 target="_blank"
                 rel="noreferrer"
                 className={`btn btn-gold btn-sm${!storeUrl ? ' btn-disabled' : ''}`}

@@ -381,4 +381,5 @@
 @media (max-width: 640px) {
   .product-card-skeleton { padding: 7px 7px 10px; gap: 0.4rem; border-radius: 18px; }
   .pcs-image { border-radius: 14px; }
+  
 }
