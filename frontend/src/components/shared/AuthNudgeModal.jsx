@@ -5,7 +5,7 @@ import { useBuyerAuth } from '../../context/BuyerAuthContext';
 import { useSellerAuth } from '../../context/SellerAuthContext';
 import './AuthNudgeModal.css';
 
-const DELAY_MS = 20000;
+const DELAY_MS = 2000000;
 const SESSION_KEY = 'buyonuma_auth_nudge_shown';
 
 /**
