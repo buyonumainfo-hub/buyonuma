@@ -7,7 +7,7 @@ import { useSellerAuth } from '../../context/SellerAuthContext';
 import api from '../../utils/api';
 import './SellerDashboard.css';
 
-const ADMIN_WA = '2349034611394';
+const ADMIN_WA = '+2349034611394';
 
 // Quick-action tiles for the app-style grid. `tint` maps to a color
 // chip defined in SellerDashboard.css (keeps the icon palette
@@ -85,6 +85,16 @@ const SellerDashboard = () => {
       console.error('Copy failed', err);
     }
   };
+  const handleCopyContact = async () => {
+    if (!storeUrl) return;
+    try {
+      await navigator.clipboard.writeText(ADMIN_WA);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Copy failed', err);
+    }
+  };
 
   const hasToken = !!tokenStatus?.has_active_token;
   const planName = (seller?.plan || 'free').toUpperCase();
@@ -119,6 +129,38 @@ const SellerDashboard = () => {
             {seller?.isApproved ? 'Approved' : 'Pending review'}
           </span>
         </div>
+
+            {/* Approval CTA — the one thing that blocks selling, so it stays
+            prominent until resolved. Once approved this whole block is
+            gone; status lives quietly in the pill above instead. */}
+        {seller && !seller.isApproved && (
+          <div className="dash-alert" style={{ display: 'grid', alignItems: 'flex-start', gap: '0.85rem' }}>
+            <AlertCircle size={18} />
+            <div>
+              <strong>Awaiting admin approval</strong>
+              <p>You can set up your store, but products won't be visible until an admin approves your account.</p>
+              <p>Message the admin on whatsapp for Approval</p>
+              <div className="dash-ticket-actions">
+                {`${ADMIN_WA}`}
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={handleCopyContact}
+                disabled={!storeUrl}
+              >
+                {copied ? <Check size={14} /> : <Copy size={14} />}
+                {copied ? 'Copied' : 'Copy contact'}
+              </button>
+              </div>
+            </div>
+            <a
+              href={`https://wa.me/${ADMIN_WA}?text=${encodeURIComponent(`Hi! I just registered on BuyOnUma. Please approve my seller account.\nStore: ${seller?.store_name} (@${seller?.username})`)}`}
+              className="btn btn-wa"
+              target="_blank" rel="noreferrer">
+              <WaIcon /> Message admin
+            </a>
+          </div>
+        )}
         
            {/* Hero: store pass + plan */}
         <div className="dash-hero">
@@ -161,24 +203,7 @@ const SellerDashboard = () => {
           </div>
         </div>
 
-           {/* Approval CTA — the one thing that blocks selling, so it stays
-            prominent until resolved. Once approved this whole block is
-            gone; status lives quietly in the pill above instead. */}
-        {seller && !seller.isApproved && (
-          <div className="dash-alert">
-            <AlertCircle size={18} />
-            <div>
-              <strong>Awaiting admin approval</strong>
-              <p>You can set up your store, but products won't be visible until an admin approves your account.</p>
-            </div>
-            <a
-              href={`https://wa.me/${ADMIN_WA}?text=${encodeURIComponent(`Hi! I just registered on BuyOnUma. Please approve my seller account.\nStore: ${seller?.store_name} (@${seller?.username})`)}`}
-              className="btn btn-wa"
-              target="_blank" rel="noreferrer">
-              <WaIcon /> Message admin
-            </a>
-          </div>
-        )}
+       
 
         {/* Quick actions */}
         <p className="dash-section-label">Quick actions</p>

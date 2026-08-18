@@ -117,7 +117,7 @@ export default function AdminPlans() {
               <div key={p._id} className={`admin-plan-card ${!p.isActive ? 'admin-plan-card-inactive' : ''}`}>
                 <div className="admin-plan-card-head">
                   <div>
-                    <h3>{p.label}</h3>
+                    <h3 style={{ color: 'white' }}>{p.label}</h3>
                     <span className="admin-plan-key">key: {p.key}</span>
                   </div>
                   {!p.isActive && <span className="admin-plan-inactive-badge">Inactive</span>}
@@ -137,12 +137,12 @@ export default function AdminPlans() {
                   </ul>
                 )}
 
-                <div className="admin-plan-actions">
-                  <button className="btn btn-outline btn-sm" onClick={() => openEdit(p)}><Pencil size={13} /> Edit</button>
-                  <button className="btn btn-outline btn-sm" onClick={() => handleToggleActive(p)}>
+                <div className="admin-plan-actions" style={{ color: 'white' }}>
+                  <button style={{ color: 'white' }} className="btn btn-outline btn-sm" onClick={() => openEdit(p)}><Pencil size={13} /> Edit</button>
+                  <button style={{ color: 'white' }} className="btn btn-outline btn-sm" onClick={() => handleToggleActive(p)}>
                     {p.isActive ? 'Deactivate' : 'Activate'}
                   </button>
-                  <button
+                  <button style={{ color: 'white' }}
                     className="btn btn-outline btn-sm admin-plan-delete-btn"
                     onClick={() => setDeleteTarget(p)}
                     disabled={p.key === 'free'}

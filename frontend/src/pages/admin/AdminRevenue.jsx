@@ -54,17 +54,17 @@ export default function AdminRevenue() {
           <div className="revenue-stat-card">
             <TrendingUp size={20} />
             <span className="revenue-stat-label">Successful Transactions</span>
-            <strong>{summary?.totalTransactions || 0}</strong>
+            <strong style={{ color: 'white' }}>{summary?.totalTransactions || 0}</strong>
           </div>
           <div className="revenue-stat-card">
             <Clock size={20} />
             <span className="revenue-stat-label">Pending</span>
-            <strong>{summary?.pendingCount || 0}</strong>
+            <strong style={{ color: 'white' }}>{summary?.pendingCount || 0}</strong>
           </div>
           <div className="revenue-stat-card">
             <XCircle size={20} />
             <span className="revenue-stat-label">Failed</span>
-            <strong>{summary?.failedCount || 0}</strong>
+            <strong style={{ color: 'white' }}>{summary?.failedCount || 0}</strong>
           </div>
         </div>
 

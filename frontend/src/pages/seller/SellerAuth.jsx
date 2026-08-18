@@ -40,7 +40,7 @@ const SellerAuth = ({ initialMode = 'login' }) => {
 
       <div className={`seller-auth-container${isRightPanelActive ? ' right-panel-active' : ''}`}>
         <div className="seller-auth-mobile-tabs">
-          <button type="button" className={!isRightPanelActive ? 'active' : ''} onClick={() => setIsRightPanelActive(false)}>
+          <button type="button" id='signIn' className={!isRightPanelActive ? 'active' : ''} onClick={() => setIsRightPanelActive(false)}>
             Sign In
           </button>
           <button type="button" className={isRightPanelActive ? 'active' : ''} onClick={() => setIsRightPanelActive(true)}>
@@ -298,8 +298,9 @@ const SignUpForm = ({ register, navigate }) => {
     setError('');
     try {
       await register(form);
-      toast.success('Account created! Check your email and await admin approval.');
-      navigate('/seller/login');
+      toast.success('Account created! Login and massage admin for approval admin approval.');
+      document.getElementById('signIn').click(); // switch to the login panel
+       navigate('/seller/login');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Registration failed');
       setError(err.response?.data?.message || 'Registration failed');
@@ -335,6 +336,8 @@ const SignUpForm = ({ register, navigate }) => {
         <div className="form-group">
           <label className="form-label">Username *</label>
           <input
+            style={{background: 'white'}}
+            autoComplete="off"
             className="form-control"
             required
             placeholder="add a username with no space"
@@ -392,6 +395,7 @@ const SignUpForm = ({ register, navigate }) => {
           <input
             type={showPw ? 'text' : 'password'}
             className="form-control"
+            autoComplete="off"
             required
             placeholder="Min 6 characters"
             value={form.password}
