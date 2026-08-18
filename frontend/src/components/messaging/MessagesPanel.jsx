@@ -42,6 +42,7 @@ export default function MessagesPanel({ authRole, myUnreadKey }) {
   const [activeId, setActiveId] = useState(null);
 const { messages, sendMessage, loading: messagesLoading } = useThreadMessages(activeId, authRole);
   const [text, setText] = useState('');
+  const [mloading, setmLoading] = useState(false);
 
   // ── Long-press to delete a chat (mouse hold on desktop, touch hold on
   // mobile) — see backend/routes/messages.js DELETE /conversations/:id.
@@ -88,10 +89,11 @@ const { messages, sendMessage, loading: messagesLoading } = useThreadMessages(ac
 
   const handleSend = async (e) => {
     e.preventDefault();
+    setmLoading(true);
     if (!text.trim()) return;
     const toSend = text;
     setText('');
-    try { await sendMessage(toSend); } catch { toast.error('Message failed to send'); }
+    try { await sendMessage(toSend); setmLoading(false); } catch { toast.error('Message failed to send');setText(toSend); setmLoading(false); }
   };
 
   return (
@@ -176,8 +178,8 @@ const { messages, sendMessage, loading: messagesLoading } = useThreadMessages(ac
       </div>
 
       <form className="msg-input-row" onSubmit={handleSend}>
-        <input style={{color:'var(--ink-normal)', fontSize: '0.875rem'}} className="form-control" placeholder="Type a message…" value={text} onChange={e => setText(e.target.value)} />
-        <button style={{color: 'black'}} className="btn btn-primarymsg-send-btn" type="submit" aria-label="Send"><Send size={16} /></button>
+        <input style={{borderRadius: '0.25rem', fontSize: '0.875rem', outline: 'none'}}  placeholder="Type a message…" value={text} onChange={e => setText(e.target.value)} />
+        <button style={{color: 'black'}} className="btn btn-primarymsg-send-btn" type="submit" aria-label="Send"><Send size={16} />{mloading ? 'Sending...' : 'Send'}</button>
       </form>
     </div>
   </div>

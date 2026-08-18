@@ -196,12 +196,14 @@ const { isAuthenticated } = useBuyerAuth();
               className="product-seller-link"
               onClick={(e) => e.stopPropagation()}
             >
-              {product.seller.profile_picture ? (
+               {product.seller.profile_picture ? (
                 <OptimizedImage src={product.seller.profile_picture} alt={product.seller.store_name} width={64} height={64} />
               ) : (
                 <span className="seller-initial">{product.seller.store_name?.[0]}</span>
               )}
-              <span style={{color: 'var(--ink-muted)', width:'50%'}}>{product.seller.store_name}</span>
+              <p style={{color: 'var(--ink-muted)'}} className="seller-name">
+                {product.seller.store_name}
+              </p>
               {product.seller.ninStatus === 'verified' && (
                 <BadgeCheck size={12} className="verified-badge-icon" title="Verified seller" />
               )}
@@ -209,7 +211,7 @@ const { isAuthenticated } = useBuyerAuth();
                 <span className="inline-rating">
                   <Star size={10} fill="currentColor" /> {product.seller.rating.toFixed(1)}
                 </span>
-              )}
+              )} 
             </Link>
           )}
 

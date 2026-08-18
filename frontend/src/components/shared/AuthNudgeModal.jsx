@@ -5,7 +5,7 @@ import { useBuyerAuth } from '../../context/BuyerAuthContext';
 import { useSellerAuth } from '../../context/SellerAuthContext';
 import './AuthNudgeModal.css';
 
-const DELAY_MS = 2000000;
+const DELAY_MS = 20000;
 const SESSION_KEY = 'buyonuma_auth_nudge_shown';
 
 /**
@@ -21,7 +21,7 @@ export default function AuthNudgeModal() {
   const navigate = useNavigate();
   const [visible, setVisible] = useState(false);
   const [closing, setClosing] = useState(false);
-
+  
   useEffect(() => {
     if (buyerLoading || sellerLoading) return; // wait until we actually know
     if (isBuyer || isSeller) return; // already signed in — never show
@@ -43,6 +43,7 @@ export default function AuthNudgeModal() {
   const goTo = (path) => { handleClose(); setTimeout(() => navigate(path), 260); };
 
   if (!visible) return null;
+  if(window.location.pathname === '/buyer/login' || window.location.pathname === '/seller/login')  setVisible(false);
 
   return (
     <div className={`auth-nudge-overlay ${closing ? 'closing' : ''}`} onClick={handleClose}>

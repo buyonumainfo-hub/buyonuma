@@ -614,3 +614,8 @@
   margin: 0.25rem 0;
 }
 .product-modal-seller { margin-top: 0.25rem; }
+
+
+.seller-name{
+   text-overflow: ellipsis;
+}

@@ -82,7 +82,7 @@ const Navbar = () => {
               aria-label="Account menu"
               aria-expanded={menuOpen}
             >
-              <User size={20} />
+              <User size={16} />
               <ChevronDown size={12} className={`chevron ${menuOpen ? 'open' : ''}`} />
             </button>
 
