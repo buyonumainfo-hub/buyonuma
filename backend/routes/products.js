@@ -18,19 +18,19 @@ const router = express.Router();
 // than intended. Cheap, defensive insurance.
 const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-// Mark expired products inactive (run before public queries)
-// const cleanExpired = async () => {
-//   await Product.updateMany(
-//     { expires_at: { $ne: null, $lte: new Date() }, isActive: true },
-//     { $set: { isActive: false } }
-//   );
-// };
-// const activateAll = async () => {
-//   await Product.updateMany(
-//     { isActive: false},
-//     { $set: { isActive: true } }
-//   );
-// };
+//Mark expired products inactive (run before public queries)
+const cleanExpired = async () => {
+  await Product.updateMany(
+    { expires_at: { $ne: null, $lte: new Date() }, isActive: true },
+    { $set: { isActive: false } }
+  );
+};
+const activateAll = async () => {
+  await Product.updateMany(
+    { isActive: false},
+    { $set: { isActive: true } }
+  );
+};
 
 // ─── GET /api/products — public ─────────────────────────────────────────────
 // new
@@ -38,11 +38,11 @@ const escapeRegex = (str) => String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 router.get('/', locationQuery, validate, async (req, res) => {
 try {
 const tokenRequired = await isTokenRequired();
-  //  if (tokenRequired) {
-  //   await cleanExpired();
-  //  }else{
-  //    await activateAll();
-  //  }
+   if (tokenRequired) {
+    await cleanExpired();
+   }else{
+     await activateAll();
+   }
 
 const {
 page = 1, limit = 12,
