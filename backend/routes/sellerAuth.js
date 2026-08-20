@@ -11,10 +11,7 @@ import {
   sellerRegisterValidators,
   sellerLoginValidators,
   sellerProfileValidators,
-<<<<<<< HEAD
   sellerUsernameValidators,
-=======
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
   forgotPasswordValidators,
   resetPasswordValidators,
 } from '../middleware/validators.js';
@@ -89,10 +86,7 @@ router.post('/google', authLimiter,
         JWT_SECRET_GETTER(),
         { expiresIn: '30d' }
       );
-<<<<<<< HEAD
       //console.log(`Seller ${isNewAccount ? 'registered' : 'logged in'} via Google: ${seller.username} (${seller._id})`);
-=======
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 
       res.json({
         success: true,
@@ -266,11 +260,7 @@ router.get('/me', protectSeller, async (req, res) => {
 // PUT /api/seller-auth/profile
 router.put('/profile', protectSeller, writeLimiter, sellerProfileValidators, validate, async (req, res) => {
   try {
-<<<<<<< HEAD
     const allowed = ['store_name','category','description','contact','whatsapp','website','social_media_handle','profile_picture','banner','state','city','address','showAddress'];
-=======
-    const allowed = ['store_name','description','contact','whatsapp','website','social_media_handle','profile_picture','banner','state','city'];
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
     const update = {};
     allowed.forEach(k => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
 
@@ -285,7 +275,6 @@ router.put('/profile', protectSeller, writeLimiter, sellerProfileValidators, val
   }
 });
 
-<<<<<<< HEAD
 // PUT /api/seller-auth/username — change username, at most once every 7 days.
 // Username is embedded in the seller's JWT (see login/register/google
 // above) and used all over the app as the public store handle
@@ -341,8 +330,6 @@ router.put('/username', protectSeller, writeLimiter, sellerUsernameValidators, v
   }
 });
 
-=======
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 // GET /api/seller-auth/verify
 router.get('/verify', protectSeller, async (req, res) => {
   try {

@@ -37,10 +37,7 @@ const activityLogSchema = new mongoose.Schema({
       'nin_submitted',
       'nin_verified',
       'nin_rejected',
-<<<<<<< HEAD
       'username_changed',
-=======
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
       'broadcast_email_sent',
       'notification_sent',
       'ai_chat_message',

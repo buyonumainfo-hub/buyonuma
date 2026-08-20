@@ -81,10 +81,7 @@ export const resetPasswordValidators = [
 
 export const sellerProfileValidators = [
   body('store_name').optional().trim().isLength({ min: 2, max: 100 }),
-<<<<<<< HEAD
   body('category').optional().trim().notEmpty().withMessage('Category is required'),
-=======
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
   body('description').optional().isLength({ max: 1000 }),
   body('contact').optional().isLength({ max: 30 }),
   body('whatsapp').optional().isLength({ max: 20 }),
@@ -92,13 +89,11 @@ export const sellerProfileValidators = [
   body('social_media_handle').optional().isLength({ max: 100 }),
   body('nin').optional().isLength({ min: 11, max: 11 }).isNumeric(),
   body('state').optional().trim().isIn(NIGERIA_STATES).withMessage('Please select a valid Nigerian state'),
-<<<<<<< HEAD
    // City isn't required for a seller who selected "Worldwide" — they
   // ship/sell everywhere rather than being tied to one town.
   body('city').trim().custom((value, { req }) => {
     if (req.body.state === WORLDWIDE) return true;
-    if (!value) return true; // optional field
-    if (value.length < 2) throw new Error('City/town must be 2-80 characters');
+    if (!value) return true;
     if (value.length > 80) throw new Error('City/town must be 2-80 characters');
     return true;
   }),
@@ -111,9 +106,6 @@ export const sellerUsernameValidators = [
   body('username')
     .trim().isLength({ min: 3, max: 30 }).withMessage('Username must be 3-30 characters')
     .matches(/^[a-z0-9_]+$/).withMessage('Username can only contain lowercase letters, numbers and underscores'),
-=======
-  body('city').optional().trim().isLength({ min: 2, max: 80 }),
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 ];
 
 // ── Products ──────────────────────────────────────────────────────────────

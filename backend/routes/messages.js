@@ -92,10 +92,7 @@ router.get('/conversations/:id', protectAny, mongoIdParam('id'),
   async (req, res) => {
     try {
       const actor = actorFromReq(req);
-<<<<<<< HEAD
       if (!actor) return res.status(403).json({ success: false, message: 'Buyers and sellers only' });
-=======
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
       const conversation = await Conversation.findById(req.params.id);
       if (!conversation) return res.status(404).json({ success: false, message: 'Conversation not found' });
 
@@ -129,10 +126,7 @@ router.post('/conversations/:id', protectAny, writeLimiter, mongoIdParam('id'),
   async (req, res) => {
     try {
       const actor = actorFromReq(req);
-<<<<<<< HEAD
       if (!actor) return res.status(403).json({ success: false, message: 'Buyers and sellers only' });
-=======
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
       const conversation = await Conversation.findById(req.params.id);
       if (!conversation) return res.status(404).json({ success: false, message: 'Conversation not found' });
 

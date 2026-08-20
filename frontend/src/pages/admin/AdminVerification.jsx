@@ -1,15 +1,10 @@
 import { useEffect, useState } from 'react';
-<<<<<<< HEAD
 import { BadgeCheck, X, Clock, Loader2, ShieldAlert, ShieldOff, Eye } from 'lucide-react';
-=======
-import { BadgeCheck, X, Clock, Loader2 } from 'lucide-react';
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 import AdminLayout from '../../components/admin/AdminLayout';
 import api from '../../utils/api';
 import toast from 'react-hot-toast';
 import './AdminVerification.css';
 
-<<<<<<< HEAD
 const STATUS_BADGE = {
   pending:  { label: 'Pending',  color: '#b8923a', icon: Clock },
   verified: { label: 'Verified', color: '#1ebe5d', icon: BadgeCheck },
@@ -78,18 +73,11 @@ const AdminVerification = () => {
   const [tab, setTab] = useState('pending'); // 'pending' | 'log'
   const [pending, setPending] = useState([]);
   const [log, setLog] = useState([]);
-=======
-const AdminVerification = () => {
-  const [pending, setPending] = useState([]);
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
   const [loading, setLoading] = useState(true);
   const [actingId, setActingId] = useState(null);
   const [rejectingId, setRejectingId] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
-<<<<<<< HEAD
   const [viewingId, setViewingId] = useState(null);
-=======
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 
   const fetchPending = async () => {
     setLoading(true);
@@ -104,7 +92,6 @@ const AdminVerification = () => {
     }
   };
 
-<<<<<<< HEAD
   const fetchLog = async () => {
     setLoading(true);
     try {
@@ -122,9 +109,6 @@ const AdminVerification = () => {
     if (tab === 'pending') fetchPending();
     else fetchLog();
   }, [tab]);
-=======
-  useEffect(() => { fetchPending(); }, []);
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 
   const handleApprove = async (id) => {
     setActingId(id);
@@ -158,22 +142,11 @@ const AdminVerification = () => {
     }
   };
 
-<<<<<<< HEAD
   const list = tab === 'pending' ? pending : log;
-=======
-  if (loading) {
-    return (
-      <AdminLayout title="Verification Queue">
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}><div className="spinner" /></div>
-      </AdminLayout>
-    );
-  }
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 
   return (
     <AdminLayout title="Verification Queue">
       <p className="admin-verification-desc">
-<<<<<<< HEAD
         Sellers who have submitted for the verified badge. No automated identity-checking
         service is used anywhere in this flow — every submission is logged here for manual
         review. Click a row to see the full submission (name, NIN, BVN, photo).
@@ -250,67 +223,6 @@ const AdminVerification = () => {
       )}
 
       {viewingId && <DetailModal sellerId={viewingId} onClose={() => setViewingId(null)} />}
-=======
-        Sellers awaiting manual review for the verified badge. No automated identity-checking
-        service is used anywhere in this flow — compare the photo below against the submitted
-        name and NIN yourself before approving.
-      </p>
-
-      {pending.length === 0 ? (
-        <div className="empty-state">
-          <BadgeCheck size={36} />
-          <p>No pending verification requests.</p>
-        </div>
-      ) : (
-        <div className="admin-verification-list">
-          {pending.map((s) => (
-            <div key={s._id} className="admin-verification-row card">
-              {s.ninPhoto && (
-                <img
-                  src={s.ninPhoto}
-                  alt={`${s.store_name} verification submission`}
-                  className="admin-verification-photo"
-                />
-              )}
-              <div className="admin-verification-info">
-                <p className="admin-verification-name">{s.store_name}</p>
-                <p className="admin-verification-meta">@{s.username} · {s.email}</p>
-                <p className="admin-verification-meta"><strong>Full name on ID:</strong> {s.ninFullName || '—'}</p>
-                <p className="admin-verification-meta"><strong>NIN:</strong> {s.nin || '—'}</p>
-                <p className="admin-verification-meta"><Clock size={12} /> Submitted {new Date(s.createdAt).toLocaleDateString()}</p>
-              </div>
-
-              {rejectingId === s._id ? (
-                <div className="admin-verification-reject-form">
-                  <input
-                    className="form-control"
-                    placeholder="Reason for rejection…"
-                    value={rejectReason}
-                    onChange={(e) => setRejectReason(e.target.value)}
-                    maxLength={500}
-                  />
-                  <div className="admin-verification-actions">
-                    <button className="btn btn-outline btn-sm" onClick={() => { setRejectingId(null); setRejectReason(''); }}>Cancel</button>
-                    <button className="btn btn-primary btn-sm" disabled={actingId === s._id} onClick={() => handleReject(s._id)}>
-                      {actingId === s._id ? <Loader2 size={13} className="spin" /> : 'Confirm Reject'}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="admin-verification-actions">
-                  <button className="btn btn-outline btn-sm" onClick={() => setRejectingId(s._id)}>
-                    <X size={14} /> Reject
-                  </button>
-                  <button className="btn btn-primary btn-sm" disabled={actingId === s._id} onClick={() => handleApprove(s._id)}>
-                    {actingId === s._id ? <Loader2 size={13} className="spin" /> : <><BadgeCheck size={14} /> Approve</>}
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
     </AdminLayout>
   );
 };

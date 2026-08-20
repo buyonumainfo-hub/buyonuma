@@ -25,10 +25,7 @@ const SellerVerification = () => {
   const [loading, setLoading] = useState(true);
   const [nin, setNin] = useState('');
   const [fullName, setFullName] = useState('');
-<<<<<<< HEAD
   const [bvn, setBvn] = useState('');
-=======
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
   const [photo, setPhoto] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -68,7 +65,6 @@ const SellerVerification = () => {
       toast.error('Please take or upload a photo for identity review');
       return;
     }
-<<<<<<< HEAD
     if (bvn.trim() && !/^\d{11}$/.test(bvn.trim())) {
       toast.error('BVN must be exactly 11 digits');
       return;
@@ -78,13 +74,6 @@ const SellerVerification = () => {
       const res = await api.post('/verification/nin', { nin: trimmedNin, fullName: fullName.trim(), photo, bvn: bvn.trim() || undefined });
       toast.success(res.data.message || 'Submitted for review');
       setNin(''); setFullName(''); setPhoto(null); setBvn('');
-=======
-    setSubmitting(true);
-    try {
-      const res = await api.post('/verification/nin', { nin: trimmedNin, fullName: fullName.trim(), photo });
-      toast.success(res.data.message || 'Submitted for review');
-      setNin(''); setFullName(''); setPhoto(null);
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
       fetchStatus();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not submit for verification');
@@ -160,7 +149,6 @@ const SellerVerification = () => {
             </div>
 
             <div className="form-group">
-<<<<<<< HEAD
               <label className="form-label">Bank Verification Number (BVN) <span style={{ fontWeight: 400, color: 'var(--ink-muted)' }}>— optional</span></label>
               <input
                 className="form-control"
@@ -176,8 +164,6 @@ const SellerVerification = () => {
             </div>
 
             <div className="form-group">
-=======
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
               <label className="form-label">Photo (holding your ID, or the ID itself)</label>
               <SelfieCapture onCapture={setPhoto} disabled={submitting} />
               <p className="seller-verification-hint">

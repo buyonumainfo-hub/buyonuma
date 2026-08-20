@@ -91,13 +91,8 @@ function ProductModal({ product, onClose, onSaved }) {
             </div>
 
             <div className="form-group">
-<<<<<<< HEAD
               <label className="form-label">Availability</label>
               <input className="form-control" placeholder="e.g 10 In stock" value={form.time_frame} onChange={(e) => set('time_frame', e.target.value)} />
-=======
-              <label className="form-label">Availability / Time Frame</label>
-              <input className="form-control" placeholder="e.g. Mon–Fri 9am–5pm" value={form.time_frame} onChange={(e) => set('time_frame', e.target.value)} />
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
             </div>
 
             <div className="form-group">
@@ -190,15 +185,12 @@ export default function SellerProducts() {
   return (
     <SellerLayout title="My Products">
       <div className="sp-toolbar">
-<<<<<<< HEAD
         <div className="sp-stock-count">
           <Package size={15} />
           <span>
             <strong>{pagination?.total ?? products.length}</strong> / {seller?.productLimit ?? '—'} products in stock
           </span>
         </div>
-=======
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
         <button className="btn btn-gold" onClick={() => setModal('add')}>
           <Plus size={16} /> Add Product
         </button>

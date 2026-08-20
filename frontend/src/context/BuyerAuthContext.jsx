@@ -10,19 +10,15 @@ export const BuyerAuthProvider = ({ children }) => {
   const [buyer, setBuyer] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-<<<<<<< HEAD
   // True only for a genuine failure to verify (network error, backend
   // down, rate limited, timeout) — NOT for "no token stored" and NOT for
   // a confirmed-invalid token. See BUG FIX note below.
   const [authError, setAuthError] = useState(false);
-=======
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 
   const verify = useCallback(() => {
     const token = localStorage.getItem('lens_buyer_token');
     if (!token) { setLoading(false); return; }
     setLoading(true);
-<<<<<<< HEAD
     setAuthError(false);
     api.get('/buyer-auth/verify', { authRole: 'buyer' })
       .then(res => { setBuyer(res.data.buyer); setIsAuthenticated(true); })
@@ -43,11 +39,6 @@ export const BuyerAuthProvider = ({ children }) => {
           setAuthError(true);
         }
       })
-=======
-    api.get('/buyer-auth/verify', { authRole: 'buyer' })
-      .then(res => { setBuyer(res.data.buyer); setIsAuthenticated(true); })
-      .catch(() => { localStorage.removeItem('lens_buyer_token'); setIsAuthenticated(false); })
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
       .finally(() => setLoading(false));
   }, []);
 
@@ -58,10 +49,7 @@ export const BuyerAuthProvider = ({ children }) => {
     localStorage.setItem('lens_buyer_token', res.data.token);
     setBuyer(res.data.buyer);
     setIsAuthenticated(true);
-<<<<<<< HEAD
     setAuthError(false);
-=======
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
     return res.data;
   }, []);
 
@@ -70,10 +58,7 @@ export const BuyerAuthProvider = ({ children }) => {
     localStorage.setItem('lens_buyer_token', res.data.token);
     setBuyer(res.data.buyer);
     setIsAuthenticated(true);
-<<<<<<< HEAD
     setAuthError(false);
-=======
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
     return res.data;
   }, []);
 
@@ -82,10 +67,7 @@ export const BuyerAuthProvider = ({ children }) => {
     localStorage.setItem('lens_buyer_token', res.data.token);
     setBuyer(res.data.buyer);
     setIsAuthenticated(true);
-<<<<<<< HEAD
     setAuthError(false);
-=======
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
     return res.data;
   }, []);
 
@@ -93,10 +75,7 @@ export const BuyerAuthProvider = ({ children }) => {
     localStorage.removeItem('lens_buyer_token');
     setBuyer(null);
     setIsAuthenticated(false);
-<<<<<<< HEAD
     setAuthError(false);
-=======
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
   }, []);
 
   const refreshBuyer = useCallback(async () => {
@@ -108,11 +87,7 @@ export const BuyerAuthProvider = ({ children }) => {
   }, []);
 
   return (
-<<<<<<< HEAD
     <BuyerAuthContext.Provider value={{ buyer, isAuthenticated, loading, authError, retryAuth: verify, login, loginWithGoogle, register, logout, refreshBuyer }}>
-=======
-    <BuyerAuthContext.Provider value={{ buyer, isAuthenticated, loading, login, loginWithGoogle, register, logout, refreshBuyer }}>
->>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
       {children}
     </BuyerAuthContext.Provider>
   );
