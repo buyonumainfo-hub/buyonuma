@@ -1,0 +1,73 @@
+.plan-current-card { display: flex; justify-content: space-between; align-items: center; background: #0d0d0d; color: #fff; border-radius: 14px; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; }
+.plan-current-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gold, #b8923a); }
+.plan-current-card h2 { font-family: var(--font-serif); margin: 0.15rem 0 0; }
+.plan-current-stats { display: flex; gap: 1rem; font-size: 0.85rem; }
+.plan-current-stats span { display: flex; align-items: center; gap: 5px; }
+
+.plan-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+.plan-card { border: 1px solid #eee; border-radius: 14px; padding: 1.25rem; background: #fff; position: relative; display: flex; flex-direction: column; }
+.plan-card h3 { font-family: var(--font-serif); margin: 0 0 0.25rem; }
+.plan-price { font-size: 1.4rem; font-weight: 700; color: var(--gold, #b8923a); margin-bottom: 0.75rem; }
+.plan-benefits { list-style: none; padding: 0; margin: 0 0 1rem; display: flex; flex-direction: column; gap: 0.5rem; flex: 1; }
+.plan-benefits li { display: flex; align-items: flex-start; gap: 6px; font-size: 0.82rem; color: var(--ink-muted); }
+.plan-benefits li svg { color: #2ecc71; flex-shrink: 0; margin-top: 2px; }
+.plan-card-current { border-color: var(--gold, #b8923a); background: #fffaf0; }
+.plan-card-featured { border-color: var(--gold, #b8923a); box-shadow: 0 4px 20px rgba(184,146,58,0.15); }
+.plan-badge { position: absolute; top: -10px; right: 12px; background: var(--gold, #b8923a); color: #fff; font-size: 0.65rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; display: flex; align-items: center; gap: 4px; }
+
+@media (max-width: 500px) {
+  .plan-current-card { flex-direction: column; align-items: flex-start; }
+  .plan-grid { grid-template-columns: 1fr; }
+}
+@media (prefers-color-scheme: dark) {
+  .plan-card { background: #161616; border-color: #2a2a2a; }
+  .plan-card-current { background: #201a0a; }
+}
+
+
+/* Manual upgrade notice shown when Opay isn't configured — replaces the
+   plain error alert with an actionable WhatsApp contact card. */
+.manual-upgrade-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: var(--cream, #faf7f0);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.manual-upgrade-text h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+.manual-upgrade-text p {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  max-width: 46ch;
+}
+.manual-upgrade-contact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.whatsapp-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .manual-upgrade-card { flex-direction: column; align-items: flex-start; }
+  .whatsapp-btn { width: 100%; justify-content: center; }
+}

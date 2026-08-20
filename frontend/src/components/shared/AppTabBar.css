@@ -1,0 +1,278 @@
+.app-tabbar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  display: flex;
+  background: var(--white);
+  border-top: 1px solid var(--border);
+  padding: 0.35rem 0.25rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
+  z-index: 40;
+  box-shadow: 0 -2px 12px var(--shadow);
+  transition: background-color 0.25s ease, border-color 0.25s ease;
+}
+.app-tab {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  border: none; background: none; cursor: pointer;
+  padding: 0.4rem 0.1rem;
+  color: var(--ink-muted);
+  border-radius: 12px;
+  transition: color 0.15s, background 0.15s;
+}
+/* .app-tab.active { color: var(--gold); background: var(--gold-pale); } */
+.app-tab-icon { position: relative; display: flex; }
+.app-tab-label { font-size: 0.66rem; font-weight: 600; }
+.app-tab-badge {
+  position: absolute; top: -4px; right: -8px;
+  background: var(--red); color: #fff; border-radius: 999px;
+  font-size: 0.6rem; padding: 0px 4px; line-height: 1.3; min-width: 14px; text-align: center;
+}
+/* 
+.app-tab-sheet-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 50;
+  display: flex; align-items: flex-end;
+} */
+/* .app-tab-sheet {
+  background: var(--white); width: 100%; border-radius: 20px 20px 0 0;
+  padding: 0.75rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  position: relative; max-height: 70vh; overflow-y: auto;
+  animation: sheet-up 0.2s ease-out;
+} */
+/* @keyframes sheet-up { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.app-tab-sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 999px; margin: 0 auto 1rem; }
+.app-tab-sheet-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+.app-tab-sheet-item { display: flex; flex-direction: column; align-items: center; gap: 6px; text-decoration: none; color: var(--ink); font-size: 0.72rem; text-align: center; }
+.app-tab-sheet-icon { width: 48px; height: 48px; border-radius: 14px; background: var(--cream); display: flex; align-items: center; justify-content: center; color: var(--gold); position: relative; }
+.app-tab-sheet-logout { width: 100%; margin-top: 1.25rem; padding: 0.7rem; border-radius: 10px; border: 1px solid var(--border); background: var(--cream); color: var(--red); display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+.app-tab-sheet-close { position: absolute; top: 0.75rem; right: 1rem; border: none; background: var(--cream); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; } */
+
+/* Small screens: 5 tabs + labels can get tight next to safe-area insets */
+@media (max-width: 360px) {
+  .app-tab-label { font-size: 0.6rem; }
+  .app-tab { padding: 0.35rem 0.05rem; }
+}
+
+
+
+.app-tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  height: 64px;
+  padding: 0 6px calc(env(safe-area-inset-bottom, 0px));
+  background-color: #1d1d27;
+  box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.18);
+}
+
+.app-tab-border {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  width: 112px;
+  height: 22px;
+  background-color: #1d1d27;
+  will-change: transform;
+  transition: transform 0.5s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.3s;
+  pointer-events: none;
+}
+
+.app-tab {
+  all: unset;
+  position: relative;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 0 10px;
+  color: #8a8a9a;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  z-index: 2;
+  transition: transform 0.5s cubic-bezier(0.65, 0, 0.35, 1), color 0.5s;
+}
+
+.app-tab.active {
+  transform: translate3d(0, -14px, 0);
+  color: #ffffff;
+}
+.app-tab.unactive {
+  /* transform: translate3d(0, -14px, 0); */
+  color: #ffffff;
+}
+
+.app-tab-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+ 
+  border-radius: 50%;
+  transform: scale(1);
+  transition: background-color 0.5s, transform 0.5s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.app-tab.active .app-tab-icon {
+  background-color: var(--tab-color);
+  transform: scale(1);
+}
+
+.app-tab-icon svg {
+  stroke-dasharray: 400;
+}
+
+.app-tab.active .app-tab-icon svg {
+  animation: app-tab-stroke 1.2s reverse;
+}
+
+@keyframes app-tab-stroke {
+  100% {
+    stroke-dashoffset: 400;
+  }
+}
+
+.app-tab-label {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  transition: opacity 0.25s, transform 0.25s;
+}
+
+.app-tab.active .app-tab-label {
+  opacity: 10;
+  transform: translateY(6px);
+}
+
+.app-tab-badge {
+  position: absolute;
+  top: -4px;
+  right: -8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background-color: #f54888;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* --- More sheet --- */
+
+.app-tab-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background-color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+  animation: app-tab-fade-in 0.25s ease;
+}
+
+@keyframes app-tab-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.app-tab-sheet {
+  position: relative;
+  width: 100%;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 12px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  background-color: #1d1d27;
+  border-radius: 20px 20px 0 0;
+  animation: app-tab-slide-up 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes app-tab-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.app-tab-sheet-handle {
+  width: 36px;
+  height: 4px;
+  margin: 4px auto 16px;
+  border-radius: 999px;
+  background-color: #3a3a48;
+}
+
+.app-tab-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px 8px;
+}
+
+.app-tab-sheet-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #e4e4ec;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.app-tab-sheet-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: #2a2a37;
+}
+
+.app-tab-sheet-logout {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 20px;
+  padding: 12px;
+  border-radius: 12px;
+  background-color: #2a2a37;
+  color: #f54888;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.app-tab-sheet-close {
+  all: unset;
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #2a2a37;
+  color: #cfcfd8;
+  cursor: pointer;
+}
+
+@media (max-width: 360px) {
+  .app-tab-label {
+    font-size: 10px;
+  }
+  .app-tab-border {
+    width: 92px;
+  }
+}

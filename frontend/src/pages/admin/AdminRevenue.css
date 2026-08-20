@@ -1,0 +1,32 @@
+.revenue-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.85rem; margin-bottom: 1.25rem; }
+.revenue-stat-card { background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: 0.35rem; }
+.revenue-stat-card svg { color: var(--gold, #b8923a); }
+.revenue-stat-card strong { font-size: 1.3rem; font-family: var(--font-serif); }
+.revenue-stat-label { font-size: 0.72rem; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.revenue-stat-primary { background: #0d0d0d; color: #fff; border: none; }
+.revenue-stat-primary svg { color: var(--gold, #b8923a); }
+.revenue-stat-primary .revenue-stat-label { color: #ccc; }
+
+.revenue-by-plan { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.revenue-by-plan-item { background: #faf8f3; border-radius: 10px; padding: 0.6rem 1rem; display: flex; flex-direction: column; min-width: 120px; text-transform: capitalize; }
+.revenue-by-plan-item strong { font-size: 1.05rem; color: var(--gold, #b8923a); }
+.revenue-by-plan-count { font-size: 0.72rem; color: var(--ink-muted); }
+
+.revenue-table-wrap { overflow-x: auto; margin-top: 1rem; }
+.revenue-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; min-width: 640px; }
+.revenue-table th { text-align: left; padding: 0.6rem 0.75rem; color: var(--ink-muted); font-size: 0.72rem; text-transform: uppercase; border-bottom: 1px solid #eee; }
+.revenue-table td { padding: 0.7rem 0.75rem; border-bottom: 1px solid #f5f5f5; vertical-align: top; }
+.revenue-status-badge { font-weight: 700; font-size: 0.8rem; }
+.revenue-ref { font-family: monospace; font-size: 0.72rem; color: var(--ink-muted); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+
+.revenue-pagination { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 1.25rem; font-size: 0.82rem; color: var(--ink-muted); flex-wrap: wrap; }
+
+@media (max-width: 500px) {
+  .revenue-stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (prefers-color-scheme: dark) {
+  .revenue-stat-card { background: #161616; border-color: #262626; }
+  .revenue-by-plan-item { background: #201c14; }
+  .revenue-table th { border-color: #262626; }
+  .revenue-table td { border-color: #232323; }
+}

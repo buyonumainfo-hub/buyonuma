@@ -1,0 +1,199 @@
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 62px;
+  background: var(--white);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: stretch;
+  z-index: 200;
+  box-shadow: 0 -4px 24px var(--shadow);
+  /* Safe area for iPhone home indicator */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  text-decoration: none;
+  color: var(--ink-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: color var(--transition);
+  font-family: var(--font-sans);
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bottom-nav-item.active { color: var(--gold); }
+
+.bottom-nav-theme { color: var(--ink-muted); }
+.bottom-nav-theme:hover { color: var(--gold); }
+
+.bottom-nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s;
+}
+
+.bottom-nav-item.active .bottom-nav-icon {
+  transform: translateY(-2px);
+}
+
+.bottom-nav-label {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Gold dot indicator on active tab */
+.bottom-nav-dot {
+  position: absolute;
+  top: 6px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--gold);
+}
+
+/* Only show bottom nav on mobile/tablet */
+@media (min-width: 769px) {
+  .bottom-nav { display: none; }
+}
+
+/* Push page content up so it's not hidden behind the nav bar */
+@media (max-width: 768px) {
+  body { padding-bottom: calc(62px + env(safe-area-inset-bottom, 0px)); }
+}
+
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  height: 64px;
+  padding: 0 6px calc(env(safe-area-inset-bottom, 0px));
+  background-color: var(--surface-muted, hsla(0, 0%, 10%, 0.911));
+  box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.18);
+}
+
+/* The floating "notch" cut from the .menu__border in the reference —
+   same clip-path, same shape, just recolored/resized to fit our
+   smaller icon set. It sits just above the bar and slides
+   horizontally to sit right behind whichever tab is active. */
+.bottom-nav-border {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  width: 112px;
+  height: 22px;
+  background-color: var(--surface-muted, hsla(0, 0%, 10%, 0.911));
+  will-change: transform;
+  transition: transform 0.5s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.3s;
+  pointer-events: none;
+}
+
+.bottom-nav-item {
+  position: relative;
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 0 10px;
+  color: #8a8a9a;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+  z-index: 2;
+  transition: transform 0.5s cubic-bezier(0.65, 0, 0.35, 1), color 0.5s;
+}
+
+/* Pops the active tab up into the notch, mirroring
+   .menu__item.active { transform: translate3d(0, -.8em, 0); } */
+.bottom-nav-item.active {
+  transform: translate3d(0, -14px, 0);
+  color: #ffffff;
+}
+
+.bottom-nav-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  transform: scale(1);
+  transition: background-color 0.5s, transform 0.5s cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+/* Colored circle behind the active icon, same idea as
+   .menu__item.active::before { transform: scale(1); background-color: var(--bgColorItem); } */
+.bottom-nav-item.active .bottom-nav-icon {
+  background-color: var(--tab-color);
+  transform: scale(1);
+}
+
+/* stroke-dasharray is inherited by the lucide <path>/<circle> children,
+   same trick the reference uses on its own hand-drawn <svg class="icon">. */
+.bottom-nav-icon svg {
+  stroke-dasharray: 400;
+}
+
+.bottom-nav-item.active .bottom-nav-icon svg {
+  animation: bottom-nav-stroke 1.2s reverse;
+}
+
+@keyframes bottom-nav-stroke {
+  100% {
+    stroke-dashoffset: 400;
+  }
+}
+
+.bottom-nav-label {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  transition: opacity 0.25s, transform 0.25s;
+}
+
+.bottom-nav-item.active .bottom-nav-label {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+@media (max-width: 360px) {
+  .bottom-nav-label {
+    font-size: 10px;
+  }
+  .bottom-nav-border {
+    width: 92px;
+  }
+}
+
+/* Only show bottom nav on mobile/tablet */
+@media (min-width: 769px) {
+  .bottom-nav { display: none; }
+}
+
+/* Push page content up so it's not hidden behind the nav bar */
+@media (max-width: 768px) {
+  body { padding-bottom: calc(62px + env(safe-area-inset-bottom, 0px)); }
+}

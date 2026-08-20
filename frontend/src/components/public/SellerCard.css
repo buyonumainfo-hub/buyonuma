@@ -1,0 +1,199 @@
+/* ══════════════════════════════════════════════════════════════════════
+   SELLER CARD — dark "spotlight" style, paired with ProductCard.
+   Uses the same --surface-dark / --on-surface-dark fixed-dark tokens so
+   it stays correctly dark in both light and dark site themes.
+   ══════════════════════════════════════════════════════════════════════ */
+
+.seller-card {
+ --sc-bg: var(--surface-muted, hsla(0, 0%, 10%, 0.911));
+  --sc-text: var(--on-surface-dark, #f2f2f0);
+  --sc-text-muted: hsl(0 0% 100% / 0.6);
+  --sc-text-dim: hsl(0 0% 100% / 0.45);
+  --sc-border: hsl(0 0% 100% / 0.08);
+
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  cursor: pointer;
+  background: var(--sc-bg);
+  color: var(--sc-text);
+  border-radius: 24px;
+  border: none;
+  box-shadow:
+    0 1px 0 0 hsl(0 0% 100% / 0.08) inset,
+    0 0 0 1px hsl(0 0% 100% / 0.06),
+    0 4px 12px -4px hsl(0 0% 0% / 0.6);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.seller-card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 1px 0 0 hsl(0 0% 100% / 0.1) inset,
+    0 0 0 1px hsl(0 0% 100% / 0.08),
+    0 10px 24px -8px hsl(0 0% 0% / 0.7);
+}
+
+.seller-card-banner {
+  height: 130px;
+  margin: 10px 10px 0;
+  border-radius: 18px;
+  background: hsl(0 0% 14%);
+  position: relative;
+  overflow: hidden;
+}
+
+.seller-card-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.seller-card:hover .seller-card-banner img { transform: scale(1.04); }
+
+.seller-card-banner-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, hsl(0 0% 18%), hsl(0 0% 26%));
+  font-size: 2.5rem;
+}
+
+.seller-card-avatar {
+  z-index: 99;
+  position: absolute;
+  bottom: -22px;
+  left: 1.1rem;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 3px solid var(--sc-bg);
+  background: hsl(0 0% 8%);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sc-text);
+  font-weight: 700;
+  font-size: 1.1rem;
+  font-family: var(--font-serif);
+}
+
+.seller-card-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.seller-card-body {
+  padding: 1.9rem 1.1rem 1.1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.seller-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.15rem;
+}
+
+/* .badge.badge-gold is used for the category pill here — keep the gold
+   look but make sure it reads on the dark card too. */
+.seller-card-meta .badge-gold {
+  background: hsl(0 0% 100% / 0.1);
+  color: var(--gold-light, var(--gold));
+}
+
+.seller-card-meta .stars { color: var(--gold-light, var(--gold)); }
+.seller-card-meta .rating-num { color: var(--sc-text); font-weight: 600; margin-left: 2px; }
+
+.seller-card-name {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--sc-text);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.verified-badge-icon { color: #6fa8ff; flex-shrink: 0; }
+
+.seller-card-verified-pill {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: hsl(230 75% 55% / 0.85);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 0.25rem 0.55rem;
+  border-radius: 100px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+.seller-card-username {
+  font-size: 0.78rem;
+  color: var(--sc-text-muted);
+}
+
+.seller-card-location {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.seller-card-desc {
+  font-size: 0.82rem;
+  color: var(--sc-text-muted);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 0.25rem;
+  flex: 1;
+}
+
+.seller-card-footer {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--sc-border);
+}
+
+.seller-card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--gold-light, var(--gold));
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  transition: gap var(--transition);
+}
+
+.seller-card:hover .seller-card-cta { gap: 0.6rem; }
+
+/* ── Mobile: matches the 2-up product grid so Sellers/Products pages
+   feel consistent when browsed side by side. ── */
+@media (max-width: 640px) {
+  .seller-card { border-radius: 18px; }
+  .seller-card-banner { height: 92px; margin: 7px 7px 0; border-radius: 14px; }
+  .seller-card-avatar { width: 38px; height: 38px; bottom: -16px; left: 0.8rem; font-size: 0.9rem; }
+  .seller-card-body { padding: 1.5rem 0.75rem 0.75rem; gap: 0.25rem; }
+  .seller-card-name { font-size: 0.85rem; }
+  
+  .seller-card-cta { font-size: 0.68rem; }
+}

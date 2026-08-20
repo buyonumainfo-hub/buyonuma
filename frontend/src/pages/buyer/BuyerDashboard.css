@@ -1,0 +1,20 @@
+.buyer-dash { min-height: 100vh; background: var(--cream); }
+.buyer-dash-header { background: var(--charcoal, #0d0d0d); color: #fff; padding: 2rem 1.5rem 1.25rem; }
+.buyer-dash-header h1 { font-family: var(--font-serif); font-size: 1.6rem; margin: 0 0 0.25rem; }
+.buyer-dash-body { padding: 1.25rem; max-width: 900px; margin: 0 auto; padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)); }
+@media (max-width: 600px) { .buyer-dash-header { padding: 1.5rem 1rem 1rem; } .buyer-dash-header h1 { font-size: 1.3rem; } .buyer-dash-body { padding: 0.85rem; padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)); } }
+.buyer-conv-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.buyer-conv-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border: 1px solid #eee; border-radius: 10px; cursor: pointer; background: #fff; }
+.buyer-conv-item.active { border-color: var(--gold); background: #fffaf0; }
+.buyer-conv-item img, .buyer-conv-item .avatar-fallback { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: var(--gold); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; }
+.buyer-conv-meta { flex: 1; min-width: 0; }
+.buyer-conv-meta strong { display: block; font-size: 0.9rem; }
+.buyer-conv-meta span { font-size: 0.78rem; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.buyer-unread-dot { background: var(--gold); color: #fff; border-radius: 999px; font-size: 0.7rem; padding: 1px 7px; }
+.chat-thread { display: flex; flex-direction: column; height: 60vh; border: 1px solid #eee; border-radius: 10px; background: #fff; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.chat-bubble { max-width: 75%; padding: 0.5rem 0.75rem; border-radius: 12px; font-size: 0.85rem; }
+.chat-bubble.mine { align-self: flex-end; background: var(--gold); color: #fff; }
+.chat-bubble.theirs { align-self: flex-start; background: #f1f1f1; }
+.chat-input-row { display: flex; gap: 0.5rem; padding: 0.75rem; border-top: 1px solid #eee; }
+.chat-input-row input { flex: 1; }
