@@ -38,6 +38,7 @@
   flex-wrap: wrap;
 }
 .admin-verification-reject-form input { min-width: 220px; }
+<<<<<<< HEAD
 
 /* ── Tabs ─────────────────────────────────────────────────────────────── */
 .admin-verification-tabs {
@@ -108,3 +109,5 @@
 }
 .admin-verification-detail-row span { color: var(--ink-muted); }
 .admin-verification-detail-row strong { text-align: right; word-break: break-word; }
+=======
+>>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a

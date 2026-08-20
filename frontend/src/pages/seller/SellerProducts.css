@@ -1,6 +1,7 @@
 /* ── Toolbar ──────────────────────────────────────────────────────────── */
 .sp-toolbar {
   display: flex;
+<<<<<<< HEAD
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
@@ -21,6 +22,12 @@
 }
 
 
+=======
+  justify-content: flex-end;
+  margin-bottom: 1.25rem;
+}
+
+>>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 /* ── Pending-approval state ───────────────────────────────────────────── */
 .sp-pending-state { text-align: center; padding: 4rem 1.5rem; }
 .sp-pending-icon { font-size: 3rem; margin-bottom: 1rem; }

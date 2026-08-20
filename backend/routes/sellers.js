@@ -521,7 +521,10 @@ router.put('/admin/:id', protect, requirePermission('sellers.edit'), writeLimite
     if (!seller) return res.status(404).json({ success: false, message: 'Seller not found' });
     await cache.delPrefix('sellers:');
     await cache.del(`seller:${req.params.id}`);
+<<<<<<< HEAD
     await cache.del(`seller:${seller.username}`);
+=======
+>>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 
     // ── Affiliate commission on an admin-granted plan change ────────────
     // If the admin just moved this seller onto a higher-value plan than

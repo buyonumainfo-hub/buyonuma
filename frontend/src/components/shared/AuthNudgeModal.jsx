@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
+<<<<<<< HEAD
 import { useNavigate, useLocation } from 'react-router-dom';
+=======
+import { useNavigate } from 'react-router-dom';
+>>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 import { X, ShoppingBag, Store, UserPlus } from 'lucide-react';
 import { useBuyerAuth } from '../../context/BuyerAuthContext';
 import { useSellerAuth } from '../../context/SellerAuthContext';
@@ -8,6 +12,7 @@ import './AuthNudgeModal.css';
 const DELAY_MS = 20000;
 const SESSION_KEY = 'buyonuma_auth_nudge_shown';
 
+<<<<<<< HEAD
 // Routes where the nudge should never appear — auth pages already ask the
 // visitor to sign in/up, so popping this over them is redundant and just
 // gets in the way.
@@ -16,6 +21,8 @@ const EXCLUDED_PATHS = [
   '/seller/login', '/seller/register',
 ];
 
+=======
+>>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 /**
  * Soft sign-in nudge for anonymous visitors — appears once, 20 seconds
  * into a session, only if the visitor isn't logged in as either a buyer
@@ -27,6 +34,7 @@ export default function AuthNudgeModal() {
   const { isAuthenticated: isBuyer, loading: buyerLoading } = useBuyerAuth();
   const { isAuthenticated: isSeller, loading: sellerLoading } = useSellerAuth();
   const navigate = useNavigate();
+<<<<<<< HEAD
   const location = useLocation();
   const [visible, setVisible] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -37,6 +45,14 @@ export default function AuthNudgeModal() {
     if (buyerLoading || sellerLoading) return; // wait until we actually know
     if (isBuyer || isSeller) return; // already signed in — never show
     if (isExcludedPath) return; // never show on auth pages
+=======
+  const [visible, setVisible] = useState(false);
+  const [closing, setClosing] = useState(false);
+  
+  useEffect(() => {
+    if (buyerLoading || sellerLoading) return; // wait until we actually know
+    if (isBuyer || isSeller) return; // already signed in — never show
+>>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
     if (sessionStorage.getItem(SESSION_KEY)) return; // already shown this session
 
     const timer = setTimeout(() => {
@@ -45,6 +61,7 @@ export default function AuthNudgeModal() {
     }, DELAY_MS);
 
     return () => clearTimeout(timer);
+<<<<<<< HEAD
   }, [isBuyer, isSeller, buyerLoading, sellerLoading, isExcludedPath]);
 
   // If the visitor navigates into an auth page while the nudge happens to
@@ -56,6 +73,9 @@ export default function AuthNudgeModal() {
       setClosing(false);
     }
   }, [isExcludedPath]);
+=======
+  }, [isBuyer, isSeller, buyerLoading, sellerLoading]);
+>>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 
   const handleClose = () => {
     setClosing(true);
@@ -64,7 +84,12 @@ export default function AuthNudgeModal() {
 
   const goTo = (path) => { handleClose(); setTimeout(() => navigate(path), 260); };
 
+<<<<<<< HEAD
   if (!visible || isExcludedPath) return null;
+=======
+  if (!visible) return null;
+  if(window.location.pathname === '/buyer/login' || window.location.pathname === '/seller/login')  setVisible(false);
+>>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 
   return (
     <div className={`auth-nudge-overlay ${closing ? 'closing' : ''}`} onClick={handleClose}>

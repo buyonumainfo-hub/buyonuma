@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .dashboard{display:flex;flex-direction:column;gap:2rem}
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.25rem}
 .stat-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;display:flex;align-items:center;gap:1.25rem}
@@ -115,3 +116,122 @@
 }
 .token-toggle-btn.on  .token-toggle-knob { left: 27px; }
 .token-toggle-btn.off .token-toggle-knob { left: 3px; }
+=======
+.dashboard{display:flex;flex-direction:column;gap:2rem}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.25rem}
+.stat-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;display:flex;align-items:center;gap:1.25rem}
+.stat-card-icon{width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.stat-card-value{font-family:var(--font-serif);font-size:2rem;font-weight:700;color:var(--ink);line-height:1;margin-bottom:0.25rem}
+.stat-card-label{font-size:0.8rem;color:var(--ink-muted);font-weight:500}
+.stat-card-sub{font-size:0.68rem;color:var(--ink-muted);margin-top:0.1rem}
+.dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem}
+.dashboard-section{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem}
+.dashboard-section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem}
+.dashboard-section-header h3{font-family:var(--font-serif);font-size:1rem;font-weight:700}
+.empty-text{font-size:0.875rem;color:var(--ink-muted)}
+.recent-list{display:flex;flex-direction:column;gap:0.75rem}
+.recent-item{display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0;border-bottom:1px solid var(--border)}
+.recent-item:last-child{border-bottom:none}
+.recent-avatar,.recent-img{width:36px;height:36px;border-radius:50%;background:var(--surface-dark);color:var(--on-surface-dark);font-weight:700;font-size:0.9rem;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+.recent-img{border-radius:6px}
+.recent-avatar img,.recent-img img{width:100%;height:100%;object-fit:cover}
+.recent-info{flex:1;min-width:0}
+.recent-name{font-size:0.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recent-sub{font-size:0.75rem;color:var(--ink-muted)}
+.category-bars{display:flex;flex-direction:column;gap:0.75rem}
+.category-bar-row{display:flex;align-items:center;gap:0.75rem}
+.category-bar-label{font-size:0.8rem;color:var(--ink-muted);width:140px;flex-shrink:0}
+.category-bar-track{flex:1;height:8px;background:var(--cream-dark);border-radius:100px;overflow:hidden}
+.category-bar-fill{height:100%;background:var(--gold);border-radius:100px;transition:width 0.6s ease}
+.category-bar-count{font-size:0.8rem;font-weight:600;width:24px;text-align:right}
+.token-gen-form{display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;padding:1.25rem;background:var(--cream);border-radius:var(--radius-lg);border:1px solid var(--border)}
+@media(max-width:1024px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:768px){.stats-grid{grid-template-columns:1fr}.dashboard-grid{grid-template-columns:1fr}}
+
+/* ── Token System Toggle Card ─────────────────────────────────────────────── */
+.token-system-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 1.25rem 1.5rem;
+  background: var(--cream);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 1.25rem;
+}
+
+.token-system-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex: 1;
+}
+
+.token-system-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.token-system-title {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.token-system-desc {
+  font-size: 0.82rem;
+  color: var(--ink-muted);
+  line-height: 1.55;
+  max-width: 480px;
+}
+
+.token-system-right {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-shrink: 0;
+}
+
+.token-system-status {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Toggle pill switch */
+.token-toggle-btn {
+  position: relative;
+  width: 52px;
+  height: 28px;
+  border-radius: 100px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.25s ease;
+  flex-shrink: 0;
+}
+.token-toggle-btn.on  { background: var(--gold); }
+.token-toggle-btn.off { background: #27ae60; }
+.token-toggle-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.token-toggle-knob {
+  position: absolute;
+  top: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--on-surface-dark);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  transition: left 0.25s ease;
+}
+.token-toggle-btn.on  .token-toggle-knob { left: 27px; }
+.token-toggle-btn.off .token-toggle-knob { left: 3px; }
+>>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a

@@ -3,7 +3,11 @@ import { body } from 'express-validator';
 import Seller from '../models/Seller.js';
 import { protect, protectSeller, requirePermission } from '../middleware/auth.js';
 import { writeLimiter } from '../middleware/rateLimiter.js';
+<<<<<<< HEAD
 import { ninReviewValidators, mongoIdParam } from '../middleware/validators.js';
+=======
+import { ninReviewValidators } from '../middleware/validators.js';
+>>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 import { validate } from '../middleware/validate.js';
 import { logActivity } from '../utils/activityLog.js';
 import { createNotification } from '../utils/notify.js';
@@ -27,6 +31,7 @@ router.post('/nin', protectSeller, writeLimiter,
   body('nin').trim().matches(/^\d{11}$/).withMessage('NIN must be exactly 11 digits'),
   body('fullName').trim().isLength({ min: 3, max: 150 }).withMessage('Enter your full legal name as it appears on your ID'),
   body('photo').trim().notEmpty().withMessage('A photo is required for verification'),
+<<<<<<< HEAD
   // BVN is optional — a seller may add it for extra confidence during
   // manual review, but verification never requires it.
   body('bvn').optional({ checkFalsy: true }).trim().matches(/^\d{11}$/).withMessage('BVN must be exactly 11 digits'),
@@ -35,6 +40,13 @@ router.post('/nin', protectSeller, writeLimiter,
     try {
       const { nin, fullName, photo, bvn } = req.body;
       const seller = await Seller.findById(req.seller.id).select('+nin +ninFullName +ninPhoto +bvn ninStatus store_name username');
+=======
+  validate,
+  async (req, res) => {
+    try {
+      const { nin, fullName, photo } = req.body;
+      const seller = await Seller.findById(req.seller.id).select('+nin +ninFullName +ninPhoto ninStatus store_name username');
+>>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
       if (!seller) return res.status(404).json({ success: false, message: 'Seller not found' });
 
       if (seller.ninStatus === 'verified') {
@@ -44,11 +56,15 @@ router.post('/nin', protectSeller, writeLimiter,
       seller.nin = nin;
       seller.ninFullName = fullName;
       seller.ninPhoto = photo;
+<<<<<<< HEAD
       seller.bvn = bvn ? bvn.trim() : null;
+=======
+>>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
       seller.ninStatus = 'pending';
       seller.ninRejectionReason = '';
       await seller.save();
 
+<<<<<<< HEAD
       // The submitted details live on the Seller document itself
       // (nin/ninFullName/ninPhoto/bvn — all select:false, admin-only) and
       // this event is appended to the append-only ActivityLog, so every
@@ -57,6 +73,11 @@ router.post('/nin', protectSeller, writeLimiter,
       await cache.delPrefix('sellers:');
       await cache.del(`seller:${seller._id}`);
       await cache.del(`seller:${seller.username}`);
+=======
+      await logActivity({ type: 'nin_submitted', seller: seller._id });
+      await cache.delPrefix('sellers:');
+      await cache.del(`seller:${seller._id}`);
+>>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 
       res.json({
         success: true,
@@ -81,6 +102,7 @@ router.get('/nin/status', protectSeller, async (req, res) => {
 });
 
 // GET /api/verification/nin/pending — admin: queue of submissions awaiting
+<<<<<<< HEAD
 // manual review. Kept lightweight (no NIN/BVN/photo) — the admin clicks a
 // row in the UI, which calls GET /nin/:id/details below to pull the full
 // submission on demand, rather than shipping every seller's sensitive
@@ -89,6 +111,14 @@ router.get('/nin/pending', protect, requirePermission('verification.review'), as
   try {
     const sellers = await Seller.find({ ninStatus: 'pending' })
       .select('store_name username email ninStatus createdAt')
+=======
+// manual review, including the full name, NIN and photo the seller
+// submitted (only ever exposed to an authenticated admin, never publicly).
+router.get('/nin/pending', protect, requirePermission('verification.review'), async (req, res) => {
+  try {
+    const sellers = await Seller.find({ ninStatus: 'pending' })
+      .select('+nin +ninFullName +ninPhoto store_name username email ninStatus createdAt')
+>>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
       .sort({ createdAt: 1 });
     res.json({ success: true, sellers });
   } catch (err) {
@@ -96,6 +126,7 @@ router.get('/nin/pending', protect, requirePermission('verification.review'), as
   }
 });
 
+<<<<<<< HEAD
 // GET /api/verification/nin/log — admin: every seller who has ever
 // submitted for verification (pending, verified, or rejected), light
 // fields only. This is the durable "verification log" the admin browses;
@@ -126,6 +157,8 @@ router.get('/nin/:id/details', protect, requirePermission('verification.review')
   }
 });
 
+=======
+>>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 // PATCH /api/verification/nin/:id/review — admin manually approves or rejects
 router.patch('/nin/:id/review', protect, requirePermission('verification.review'), writeLimiter, ninReviewValidators, validate, async (req, res) => {
   try {
@@ -159,11 +192,15 @@ router.patch('/nin/:id/review', protect, requirePermission('verification.review'
       type: 'nin',
     });
 
+<<<<<<< HEAD
     await Promise.all([
       cache.delPrefix('sellers:'),
       cache.del(`seller:${seller._id}`),
       cache.del(`seller:${seller.username}`),
     ]);
+=======
+    await Promise.all([cache.delPrefix('sellers:'), cache.del(`seller:${seller._id}`)]);
+>>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 
     res.json({ success: true, seller: { _id: seller._id, ninStatus: seller.ninStatus } });
   } catch (err) {

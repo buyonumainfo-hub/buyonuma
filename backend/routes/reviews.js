@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 import mongoose from 'mongoose';
+=======
+>>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 import express from 'express';
 import { body } from 'express-validator';
 import Review from '../models/Review.js';
@@ -15,6 +18,7 @@ const router = express.Router();
 // Recomputes and persists a seller's average rating from their reviews.
 // Called after every create/update/delete so Seller.rating (already used
 // throughout the app for sorting/display) always stays in sync.
+<<<<<<< HEAD
 //
 // BUG FIX: `sellerId` arrives here as a plain string (req.params.id) from
 // the POST route below. Mongoose's aggregate() pipeline is sent to the
@@ -42,6 +46,17 @@ const recalcSellerRating = async (sellerId) => {
   // caches under the username, not the id — bust that key too or the
   // page keeps showing the old rating until the 30s TTL expires.
   if (seller?.username) await cache.del(`seller:${seller.username}`);
+=======
+const recalcSellerRating = async (sellerId) => {
+  const agg = await Review.aggregate([
+    { $match: { seller: sellerId } },
+    { $group: { _id: '$seller', avg: { $avg: '$rating' }, count: { $sum: 1 } } },
+  ]);
+  const rating = agg[0]?.avg || 0;
+  await Seller.findByIdAndUpdate(sellerId, { rating: Math.round(rating * 10) / 10 });
+  await cache.delPrefix('sellers:');
+  await cache.del(`seller:${sellerId}`);
+>>>>>>> b403b42571a91fae11e3332f19cf5691d2aba20a
 };
 
 // ─── GET /api/reviews/seller/:id — public, paginated ───────────────────────
